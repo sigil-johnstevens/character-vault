@@ -39,11 +39,6 @@
         }
       ],
   "esmodules": ["./index.js"],
-  "scripts": [
-    "src/createUsers.js",
-    "src/importActors.js",
-    "src/uploadActors.js"
-  ],
 	"manifest": "https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/savagerifts/module.json",
 	"download": "https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/savagerifts/module.zip"
 }
