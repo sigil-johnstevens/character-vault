@@ -1,0 +1,44 @@
+{
+  "id": "waymakers-gm-tools",
+  "title": "Waymakers GM Tools",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "12",
+    "verified": "12"
+  },
+  "description": "A set of tools for Game Masters in our Rifts® Waymakers West Marches game.",
+  "authors": [
+    {
+      "name": "Venatus Vinco",
+      "email": "venatus.vinco@gmail.com",
+      "url": "savagerifts.com",
+      "discord": "johnvenatusvinco",
+      "flags": {}
+    }
+  ],
+  "url": "www.savagerifts.com",
+  "packs": [
+    {
+      "name": "macros",
+      "label": "Macros",
+      "path": "packs/macros",
+      "type": "Macro",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Wayfinders",
+      "sorting": "a",
+      "color": "#5d88bb",
+      "packs": ["macros"]
+        }
+      ],
+  "esmodules": ["./index.js"],
+	"manifest": "https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/savagerifts/module.json",
+	"download": "https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/savagerifts/module.zip"
+}
