@@ -8,7 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install zip
         run: sudo apt-get install -y zip
@@ -17,8 +19,13 @@ jobs:
         run: |
           zip -r module.zip src packs license.md module.json
 
-      - name: Upload ZIP file as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: module.zip
-          path: module.zip
+      - name: Commit and push the ZIP file
+        env:
+          ACTIONS_PAT: ${{ secrets.ACTIONS_PAT }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/${{ github.repository }}.git
+          git add module.zip
+          git commit -m "Add generated module.zip"
+          git push
