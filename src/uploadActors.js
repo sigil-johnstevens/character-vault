@@ -1,4 +1,4 @@
-MODULE_ID = "waymakers-gm-tools";
+const MODULE_ID = "waymakers-gm-tools";
 
 // Step 1: Get Folders in the Actor Directory
 export function getActorFolders() {
