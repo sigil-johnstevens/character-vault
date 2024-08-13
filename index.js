@@ -27,9 +27,8 @@ Hooks.once('init', () => {
         config: true,
         type: String,
         default: "yourPAT",
-        // Set restricted access if sensitive
         onChange: value => {
-            console.log("GitHub PAT updated");  // Optional: handle changes to the PAT
+            console.log("GitHub PAT updated");
         }
     });
 });
@@ -48,4 +47,16 @@ Hooks.once("ready", () => {
     window.uploadToGitHub = uploadToGitHub;
     window.toBase64 = toBase64;
     console.log("Waymakers GM Tools: Functions are now globally available.");
+});
+
+// Add Import from GitHub Context Menu
+Hooks.on('getActorDirectoryEntryContext', (html, options) => {
+    options.push({
+        name: "Import from GitHub",
+        icon: '<i class="fas fa-download"></i>',
+        callback: async li => {
+            const actorId = li.attr('data-document-id');  // Get the actor ID from the context
+            openImportDialog(actorId);
+        }
+    });
 });
