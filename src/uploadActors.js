@@ -44,7 +44,7 @@ export async function uploadActorsFromFolderToGitHub(folder) {
 }
 
 // Step 4: Function to Upload Each Actor to GitHub
-async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
+export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
     const encodedName = encodeURIComponent(`${actor.name}.json`);
     const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodedName}`;
 
