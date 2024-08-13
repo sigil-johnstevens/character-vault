@@ -66,7 +66,7 @@ Hooks.on('renderActorDirectory', (app, html, data) => {
                 <form>
                     <div class="form-group">
                         <label>Actor Folder Name:</label>
-                        <input type="text" name="sessionName" value="PCs"/>
+                        <input type="text" name="sessionName" value="Heroes"/>
                     </div>
                     <div class="form-group">
                         <label>Usernames (comma separated):</label>
