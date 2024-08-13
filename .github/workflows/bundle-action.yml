@@ -17,7 +17,7 @@ jobs:
 
       - name: Generate ZIP file in root directory
         run: |
-          zip -r module.zip src packs license.md module.json
+          zip -r module.zip src packs license.md module.json index.js
 
       - name: Commit and push the ZIP file
         env:
