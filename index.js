@@ -49,6 +49,51 @@ Hooks.once("ready", () => {
     console.log("Waymakers GM Tools: Functions are now globally available.");
 });
 
+// Add Actor Directory Buttons
+
+Hooks.on('renderActorDirectory', (app, html, data) => {
+    // Add a button for generating users
+    const generateUsersButton = $('<button class="generate-users-button">Generate Users</button>');
+    generateUsersButton.on('click', () => {
+        const sessionName = prompt('Name of actor folder (new or existing):', 'PCs');
+        const userInput = prompt('Input comma separated list of users');
+        if (sessionName && userInput) {
+            generateUsers(sessionName, userInput);
+        }
+    });
+    
+    // Add a button for importing from GitHub
+    const importFromGitHubButton = $('<button class="import-github-button">Import from GitHub</button>');
+    importFromGitHubButton.on('click', () => {
+        openImportDialog();
+    });
+
+    // Add a button for deleting all non-GM users
+    const deleteNonGMUsersButton = $('<button class="delete-non-gm-users-button">Delete Non-GM Users</button>');
+    deleteNonGMUsersButton.on('click', async () => {
+        if (!game.user.isGM) {
+            ui.notifications.warn("You must be a GM to run this macro.");
+            return;
+        }
+
+        const nonGMs = game.users.filter(user => !user.isGM);
+        for (let user of nonGMs) {
+            console.log(`Removing user: ${user.name}`);
+            await user.delete();
+        }
+
+        ui.notifications.info("All non-GM users have been removed.");
+    });
+
+    // Create a container for the buttons and append it to the footer
+    const buttonContainer = $('<div class="custom-buttons"></div>');
+    buttonContainer.append(generateUsersButton);
+    buttonContainer.append(importFromGitHubButton);
+    buttonContainer.append(deleteNonGMUsersButton);
+    html.find('.directory-footer').append(buttonContainer);
+});
+
+
 // Add Import from GitHub Context Menu
 Hooks.on('getActorDirectoryEntryContext', (html, options) => {
     options.push({
