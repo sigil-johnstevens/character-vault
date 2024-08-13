@@ -27,6 +27,7 @@ Hooks.once('init', () => {
         config: true,
         type: String,
         default: "yourPAT",
+        secret: true,
         onChange: value => {
             console.log("GitHub PAT updated");
         }
@@ -34,7 +35,7 @@ Hooks.once('init', () => {
 });
 
 import { generateUsers } from './src/createUsers.js';
-import { fetchGitHubActorList, openImportDialog, importActorFromGitHubToActor } from './src/importActors.js';
+import { fetchGitHubActorList, openImportDialog, openFolderImportDialog, importActorFromGitHubToActor } from './src/importActors.js';
 import { openFolderUploadDialog, uploadActorsFromFolderToGitHub, uploadToGitHub, toBase64 } from './src/uploadActors.js';
 
 Hooks.once("ready", () => {
@@ -43,6 +44,7 @@ Hooks.once("ready", () => {
     window.openImportDialog = openImportDialog;
     window.importActorFromGitHubToActor = importActorFromGitHubToActor;
     window.openFolderUploadDialog = openFolderUploadDialog;
+    window.openFolderImportDialog = openFolderImportDialog;
     window.uploadActorsFromFolderToGitHub = uploadActorsFromFolderToGitHub;
     window.uploadToGitHub = uploadToGitHub;
     window.toBase64 = toBase64;
@@ -52,27 +54,55 @@ Hooks.once("ready", () => {
 // Add Actor Directory Buttons
 
 Hooks.on('renderActorDirectory', (app, html, data) => {
+    // Create the header
+    const header = $('<h3 class="waymaker-header">Waymaker Control Panel</h3>');
+
     // Add a button for generating users
     const generateUsersButton = $('<button class="generate-users-button">Generate Users</button>');
     generateUsersButton.on('click', () => {
-        const sessionName = prompt('Name of actor folder (new or existing):', 'PCs');
-        const userInput = prompt('Input comma separated list of users');
-        if (sessionName && userInput) {
-            generateUsers(sessionName, userInput);
-        }
+        new Dialog({
+            title: "Generate Users",
+            content: `
+                <form>
+                    <div class="form-group">
+                        <label>Actor Folder Name:</label>
+                        <input type="text" name="sessionName" value="PCs"/>
+                    </div>
+                    <div class="form-group">
+                        <label>Usernames (comma separated):</label>
+                        <input type="text" name="userInput"/>
+                    </div>
+                </form>
+            `,
+            buttons: {
+                generate: {
+                    label: "Generate",
+                    callback: (html) => {
+                        const sessionName = html.find('input[name="sessionName"]').val();
+                        const userInput = html.find('input[name="userInput"]').val();
+                        if (sessionName && userInput) {
+                            generateUsers(sessionName, userInput);
+                        }
+                    }
+                },
+                cancel: {
+                    label: "Cancel"
+                }
+            }
+        }).render(true);
     });
-    
+
     // Add a button for importing from GitHub
     const importFromGitHubButton = $('<button class="import-github-button">Import from GitHub</button>');
     importFromGitHubButton.on('click', () => {
-        openImportDialog();
+        openFolderImportDialog();
     });
 
     // Add a button for deleting all non-GM users
     const deleteNonGMUsersButton = $('<button class="delete-non-gm-users-button">Delete Non-GM Users</button>');
     deleteNonGMUsersButton.on('click', async () => {
         if (!game.user.isGM) {
-            ui.notifications.warn("You must be a GM to run this macro.");
+            ui.notifications.warn("You must be a GM to run this action.");
             return;
         }
 
@@ -85,11 +115,19 @@ Hooks.on('renderActorDirectory', (app, html, data) => {
         ui.notifications.info("All non-GM users have been removed.");
     });
 
+    // Add a button for uploading actors from a folder to GitHub
+    const uploadFolderButton = $('<button class="upload-folder-button">Upload Folder to GitHub</button>');
+    uploadFolderButton.on('click', () => {
+        openFolderUploadDialog();
+    });
+
     // Create a container for the buttons and append it to the footer
     const buttonContainer = $('<div class="custom-buttons"></div>');
+    buttonContainer.append(header);
     buttonContainer.append(generateUsersButton);
     buttonContainer.append(importFromGitHubButton);
     buttonContainer.append(deleteNonGMUsersButton);
+    buttonContainer.append(uploadFolderButton);
     html.find('.directory-footer').append(buttonContainer);
 });
 

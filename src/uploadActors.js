@@ -77,10 +77,12 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
 
     if (response.ok) {
         console.log(`${actor.name} has been exported to GitHub.`);
+        ui.notifications.info(`Actor ${actor.name} has been successfully uploaded to GitHub.`);
     } else {
         console.error('Error exporting to GitHub:', response.statusText);
         console.log('Response status:', response.status);
         console.log('Response text:', await response.text());
+        ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
     }
 }
 
