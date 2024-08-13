@@ -1,0 +1,27 @@
+name: Bundle
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install zip
+        run: sudo apt-get install -y zip
+
+      - name: Generate ZIP file in root directory
+        run: |
+          zip -r module.zip src packs license.md module.json
+
+      - name: Upload ZIP file as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: module.zip
+          path: module.zip
