@@ -88,3 +88,10 @@ async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
 export function toBase64(str) {
     return btoa(unescape(encodeURIComponent(str)));
 }
+
+// Make functions globally available
+window.getActorFolders = getActorFolders;
+window.openFolderUploadDialog = openFolderUploadDialog;
+window.uploadActorsFromFolderToGitHub = uploadActorsFromFolderToGitHub;
+window.uploadToGitHub = uploadToGitHub;
+window.toBase64 = toBase64;

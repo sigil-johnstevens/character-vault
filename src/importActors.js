@@ -96,3 +96,7 @@ export async function importActorFromGitHubToActor(fileName, actorId) {
         ui.notifications.error('Failed to import actor from GitHub.');
     }
 }
+// Make functions globally available
+window.fetchGitHubActorList = fetchGitHubActorList;
+window.openImportDialog = openImportDialog;
+window.importActorFromGitHubToActor = importActorFromGitHubToActor;

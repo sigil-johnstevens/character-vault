@@ -94,3 +94,5 @@ export async function generateUsers(sessionName, userInput) {
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
     });
 }
+// Make the function globally available
+window.generateUsers = generateUsers;
