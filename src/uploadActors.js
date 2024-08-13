@@ -1,33 +1,41 @@
+MODULE_ID = "waymakers-gm-tools";
+
 // Step 1: Get Folders in the Actor Directory
-let actorFolders = game.folders.filter(f => f.type === "Actor");
+export function getActorFolders() {
+    return game.folders.filter(f => f.type === "Actor");
+}
 
 // Step 2: Create a Dialog for Folder Selection
-new Dialog({
-    title: "Select Actor Folder",
-    content: `<p>Select a folder to upload all actors from it to GitHub.</p>
-            <select id="folderSelect">
-              ${actorFolders.map(folder => `<option value="${folder.id}">${folder.name}</option>`).join('')}
-            </select>`,
-    buttons: {
-        upload: {
-            label: "Upload",
-            callback: async (html) => {
-                const folderId = html.find("#folderSelect")[0].value;
-                const folder = game.folders.get(folderId);
-                await uploadActorsFromFolderToGitHub(folder);
+export function openFolderUploadDialog() {
+    const actorFolders = getActorFolders();
+
+    new Dialog({
+        title: "Select Actor Folder",
+        content: `<p>Select a folder to upload all actors from it to GitHub.</p>
+                  <select id="folderSelect">
+                      ${actorFolders.map(folder => `<option value="${folder.id}">${folder.name}</option>`).join('')}
+                  </select>`,
+        buttons: {
+            upload: {
+                label: "Upload",
+                callback: async (html) => {
+                    const folderId = html.find("#folderSelect")[0].value;
+                    const folder = game.folders.get(folderId);
+                    await uploadActorsFromFolderToGitHub(folder);
+                }
+            },
+            cancel: {
+                label: "Cancel"
             }
-        },
-        cancel: {
-            label: "Cancel"
         }
-    }
-}).render(true);
+    }).render(true);
+}
 
 // Step 3: Function to Upload Actors from Selected Folder
-async function uploadActorsFromFolderToGitHub(folder) {
-    const repo = 'sigil-johnstevens/waymakers';  // Replace with your GitHub repo details
-    const path = 'actors';  // The folder path within your repo
-    const yourPAT = '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';  // Replace with your GitHub PAT
+export async function uploadActorsFromFolderToGitHub(folder) {
+    const repo = game.settings.get(MODULE_ID, "githubRepo");
+    const path = game.settings.get(MODULE_ID, "githubPath");
+    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
 
     for (let actor of folder.contents) {
         const jsonContent = JSON.stringify(actor.toJSON());
@@ -40,7 +48,6 @@ async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
     const encodedName = encodeURIComponent(`${actor.name}.json`);
     const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodedName}`;
 
-    // Check if the file already exists
     let sha = null;
     const checkResponse = await fetch(url, {
         method: 'GET',
@@ -78,6 +85,6 @@ async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
 }
 
 // UTF-8 Encoding Function
-function toBase64(str) {
+export function toBase64(str) {
     return btoa(unescape(encodeURIComponent(str)));
 }

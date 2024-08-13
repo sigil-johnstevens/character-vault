@@ -1,4 +1,43 @@
+MODULE_ID = "waymakers-gm-tools";
+
+// Register Access Token, Path, and Repo as Game Settings
+Hooks.once('init', () => {
+    game.settings.register(MODULE_ID, "githubRepo", {
+      name: "GitHub Repository",
+      hint: "The GitHub repository where your actor JSON files are stored.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "yourRepo",
+    });
+  
+    game.settings.register(MODULE_ID, "githubPath", {
+      name: "GitHub Path",
+      hint: "The path within the GitHub repository to the folder containing the actor JSON files.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "actors",
+    });
+  
+    game.settings.register(MODULE_ID, "githubPAT", {
+      name: "GitHub Personal Access Token",
+      hint: "Your GitHub Personal Access Token (PAT) for accessing the repository.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "yourPAT",
+      // Set restricted access if sensitive
+      onChange: value => {
+        console.log("GitHub PAT updated");  // Optional: handle changes to the PAT
+      }
+    });
+  });
+
+// Add Import from GitHub Context Menu
+
 // Step 1: Fetch GitHub Actor List and Parse Actor Names
+
 async function fetchGitHubActorList(repo, path, yourPAT) {
     const url = `https://api.github.com/repos/${repo}/contents/${path}`;
     const response = await fetch(url, {
@@ -47,9 +86,9 @@ Hooks.on('getActorDirectoryEntryContext', (html, options) => {
 
 // Step 3: Create a Dialog to Select Actors
 async function openImportDialog(actorId) {
-    const repo = 'sigil-johnstevens/waymakers';  // Replace with your GitHub repo details
-    const path = 'actors';  // The folder path within your repo
-    const yourPAT = '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';  // Replace with your GitHub PAT
+    const repo = game.settings.get(MODULE_ID, "githubRepo");
+    const path = game.settings.get(MODULE_ID, "githubPath");
+    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
 
     // Fetch the list of actors from GitHub
     const actorList = await fetchGitHubActorList(repo, path, yourPAT);
