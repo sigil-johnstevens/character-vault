@@ -36,7 +36,7 @@ Hooks.once('init', () => {
 
 import { generateUsers } from './src/createUsers.js';
 import { fetchGitHubActorList, openImportDialog, openFolderImportDialog, importActorFromGitHubToActor } from './src/importActors.js';
-import { openFolderUploadDialog, uploadActorsFromFolderToGitHub, uploadToGitHub, toBase64 } from './src/uploadActors.js';
+import { openFolderUploadDialog, uploadActorsFromFolderToGitHub, uploadToGitHub, uploadActorToGitHub, toBase64 } from './src/uploadActors.js';
 
 Hooks.once("ready", () => {
     window.generateUsers = generateUsers;
@@ -48,12 +48,14 @@ Hooks.once("ready", () => {
     window.uploadActorsFromFolderToGitHub = uploadActorsFromFolderToGitHub;
     window.uploadToGitHub = uploadToGitHub;
     window.toBase64 = toBase64;
+    window.uploadActorToGitHub = uploadActorToGitHub;
     console.log("Character Vault: Functions are now globally available.");
 });
 
-// Add Actor Directory Buttons
-
+// Add Actor Directory Buttons for GM only
 Hooks.on('renderActorDirectory', (app, html, data) => {
+    if (!game.user.isGM) return; // Ensure buttons are only visible to GMs
+
     // Create the header
     const header = $('<h3 class="character-vault-header">Character Vault Controls</h3>');
 
@@ -131,15 +133,33 @@ Hooks.on('renderActorDirectory', (app, html, data) => {
     html.find('.directory-footer').append(buttonContainer);
 });
 
-
-// Add Import from GitHub Context Menu
+// Add Import and Export Context Menu Options
 Hooks.on('getActorDirectoryEntryContext', (html, options) => {
     options.push({
         name: "Import from GitHub",
         icon: '<i class="fas fa-download"></i>',
         callback: async li => {
             const actorId = li.attr('data-document-id');  // Get the actor ID from the context
-            openImportDialog(actorId);
+            const actor = game.actors.get(actorId);
+            if (actor && actor.isOwner) {
+                openImportDialog(actorId);
+            } else {
+                ui.notifications.warn("You do not own this actor.");
+            }
+        }
+    });
+
+    options.push({
+        name: "Export to GitHub",
+        icon: '<i class="fas fa-upload"></i>',
+        callback: async li => {
+            const actorId = li.attr('data-document-id');  // Get the actor ID from the context
+            const actor = game.actors.get(actorId);
+            if (actor && actor.isOwner) {
+                await uploadActorToGitHub(actor);
+            } else {
+                ui.notifications.warn("You do not own this actor.");
+            }
         }
     });
 });

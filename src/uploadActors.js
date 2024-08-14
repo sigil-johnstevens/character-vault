@@ -43,8 +43,13 @@ export async function uploadActorsFromFolderToGitHub(folder) {
     }
 }
 
-// Step 4: Function to Upload Each Actor to GitHub
-export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
+// Step 4: Function to Upload a Single Actor to GitHub
+export async function uploadActorToGitHub(actor) {
+    const repo = game.settings.get(MODULE_ID, "githubRepo");
+    const path = game.settings.get(MODULE_ID, "githubPath");
+    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
+
+    const jsonContent = JSON.stringify(actor.toJSON());
     const encodedName = encodeURIComponent(`${actor.name}.json`);
     const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodedName}`;
 
@@ -90,10 +95,3 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
 export function toBase64(str) {
     return btoa(unescape(encodeURIComponent(str)));
 }
-
-// Make functions globally available
-window.getActorFolders = getActorFolders;
-window.openFolderUploadDialog = openFolderUploadDialog;
-window.uploadActorsFromFolderToGitHub = uploadActorsFromFolderToGitHub;
-window.uploadToGitHub = uploadToGitHub;
-window.toBase64 = toBase64;
