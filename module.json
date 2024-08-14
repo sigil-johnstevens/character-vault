@@ -16,6 +16,7 @@
       "flags": {}
     }
   ],
+  "esmodules": ["./index.js"],
   "url": "https://github.com/sigil-johnstevens/character-vault",
   "manifest": "This is auto replaced",
   "download": "This is auto replaced",
