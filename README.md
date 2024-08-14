@@ -35,11 +35,11 @@ Import Actors from a GitHub repository:
 
 - Easily remove all non-GM users from your game. Useful for resetting the game before a new session.
 
-# Character Vault - Game Settings
+## Character Vault - Game Settings
 
 The Character Vault module includes several configurable settings to interface with GitHub for character management.
 
-### GitHub Repository
+### **GitHub Repository**
 
 - **Name**: `GitHub Repository`
 - **Description**: Set the GitHub repository where your actor JSON files are stored (eg username/repo-name).
