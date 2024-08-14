@@ -1,3 +1,5 @@
+const MODULE_ID = "character-vault";
+
 export async function generateUsers(sessionName, userInput) {
     // Function to generate a password using DinoPass API (defaults to simple)
     async function generatePass() {
@@ -9,7 +11,7 @@ export async function generateUsers(sessionName, userInput) {
             console.error("Failed to generate password using DinoPass");
             return "fallbackPassword123";  // Fallback password in case the API fails
         }
-    } 
+    }
 
     async function getRandomColor() {
         const response = await fetch('http://colormind.io/api/', {
