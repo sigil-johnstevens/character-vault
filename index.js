@@ -48,14 +48,14 @@ Hooks.once("ready", () => {
     window.uploadActorsFromFolderToGitHub = uploadActorsFromFolderToGitHub;
     window.uploadToGitHub = uploadToGitHub;
     window.toBase64 = toBase64;
-    console.log("Waymakers GM Tools: Functions are now globally available.");
+    console.log("Character Vault: Functions are now globally available.");
 });
 
 // Add Actor Directory Buttons
 
 Hooks.on('renderActorDirectory', (app, html, data) => {
     // Create the header
-    const header = $('<h3 class="waymaker-header">Waymaker Control Panel</h3>');
+    const header = $('<h3 class="character-vault-header">Character Vault Controls</h3>');
 
     // Add a button for generating users
     const generateUsersButton = $('<button class="generate-users-button">Generate Users</button>');
