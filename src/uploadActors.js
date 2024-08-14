@@ -39,7 +39,14 @@ export async function uploadActorsFromFolderToGitHub(folder) {
 
     for (let actor of folder.contents) {
         const jsonContent = JSON.stringify(actor.toJSON());
-        await uploadToGitHub(actor, jsonContent, repo, path, yourPAT);
+        const success = await uploadToGitHub(actor, jsonContent, repo, path, yourPAT);
+
+        // Add a confirmation notification for each uploaded actor
+        if (success) {
+            ui.notifications.info(`Actor ${actor.name} has been successfully uploaded to GitHub.`);
+        } else {
+            ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
+        }
     }
 }
 
@@ -83,15 +90,12 @@ export async function uploadActorToGitHub(actor) {
     if (response.ok) {
         console.log(`${actor.name} has been exported to GitHub.`);
         ui.notifications.info(`Actor ${actor.name} has been successfully uploaded to GitHub.`);
+        return true;
     } else {
         console.error('Error exporting to GitHub:', response.statusText);
         console.log('Response status:', response.status);
         console.log('Response text:', await response.text());
         ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
+        return false;
     }
-}
-
-// UTF-8 Encoding Function
-export function toBase64(str) {
-    return btoa(unescape(encodeURIComponent(str)));
 }
