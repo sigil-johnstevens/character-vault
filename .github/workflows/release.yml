@@ -17,6 +17,8 @@ jobs:
     - name: Extract tag version number
       id: get_version
       uses: battila7/get-version-action@v2
+      run: echo "version-without-v=${{ steps.get_version.outputs.version-without-v }}" >> $GITHUB_ENV
+
 
     # Substitute the Manifest and Download URLs in the module.json
     - name: Substitute Manifest and Download Links For Versioned Ones
