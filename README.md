@@ -8,7 +8,7 @@ The Character Vault provides powerful tools for managing and syncing Foundry VTT
 
 ### Generate Users
 
-![Video](media/generate-users.webm)
+![Video](https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/video/generate-users.webm)
 
 Quickly create multiple users and Actors:
 
@@ -21,7 +21,7 @@ Quickly create multiple users and Actors:
 
 ### Upload Folder to GitHub
 
-![Video](media/export.webm)
+![Video](https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/video/export.webm)
 
 Upload all actors in a selected folder to a GitHub repository to save any advancement or updates from the session:
 
@@ -30,7 +30,7 @@ Upload all actors in a selected folder to a GitHub repository to save any advanc
 
 ### Import from GitHub
 
-![Video](media/import.webm)
+![Video](https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/video/import.webm)
 
 Import Actors from a GitHub repository:
 
@@ -39,7 +39,7 @@ Import Actors from a GitHub repository:
 
 ### Remove All Non-GM Users
 
-![Video](media/remove.webm)
+![Video](https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/video/remove.webm)
 
 - Easily remove all non-GM users from your game. Useful for resetting the game before a new session.
 
@@ -47,7 +47,7 @@ Import Actors from a GitHub repository:
 
 The Character Vault module includes several configurable settings to interface with GitHub for character management.
 
-![Video](media/settings.webm)
+![Video](https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/video/settings.webm)
 
 ### GitHub Repository
 
