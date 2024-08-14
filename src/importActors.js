@@ -26,8 +26,17 @@ export async function fetchGitHubActorList() {
 }
 
 export async function openImportDialog(actorId) {
-    const actorList = await fetchGitHubActorList();
-    const actorsList = game.actors.map(actor => `<option value="${actor.id}">${actor.name}</option>`).join('');
+    const repo = game.settings.get(MODULE_ID, "githubRepo");
+    const path = game.settings.get(MODULE_ID, "githubPath");
+    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
+
+    const actorList = await fetchGitHubActorList(repo, path, yourPAT);
+    
+    // Filter out actors that the user doesn't own
+    const actorsList = game.actors
+        .filter(actor => actor.isOwner)  // Only include actors owned by the user
+        .map(actor => `<option value="${actor.id}">${actor.name}</option>`)
+        .join('');
 
     new Dialog({
         title: "Import Actor from GitHub",

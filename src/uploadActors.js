@@ -39,11 +39,34 @@ export async function uploadActorsFromFolderToGitHub(folder) {
 
     for (let actor of folder.contents) {
         const jsonContent = JSON.stringify(actor.toJSON());
-        await uploadToGitHub(actor, jsonContent, repo, path, yourPAT);
+        const success = await uploadToGitHub(actor, jsonContent, repo, path, yourPAT);
+
+        // Add a confirmation notification for each uploaded actor
+        if (success) {
+            ui.notifications.info(`Actor ${actor.name} has been successfully uploaded to GitHub.`);
+        } else {
+            ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
+        }
     }
 }
 
-// Step 4: Function to Upload Each Actor to GitHub
+// Step 4: Function to Upload a Single Actor to GitHub
+export async function uploadActorToGitHub(actor) {
+    const repo = game.settings.get(MODULE_ID, "githubRepo");
+    const path = game.settings.get(MODULE_ID, "githubPath");
+    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
+
+    const jsonContent = JSON.stringify(actor.toJSON());
+    const success = await uploadToGitHub(actor, jsonContent, repo, path, yourPAT);
+
+    if (success) {
+        ui.notifications.info(`Actor ${actor.name} has been successfully uploaded to GitHub.`);
+    } else {
+        ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
+    }
+}
+
+// Function to Upload to GitHub
 export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
     const encodedName = encodeURIComponent(`${actor.name}.json`);
     const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodedName}`;
@@ -77,23 +100,16 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
 
     if (response.ok) {
         console.log(`${actor.name} has been exported to GitHub.`);
-        ui.notifications.info(`Actor ${actor.name} has been successfully uploaded to GitHub.`);
+        return true;
     } else {
         console.error('Error exporting to GitHub:', response.statusText);
         console.log('Response status:', response.status);
         console.log('Response text:', await response.text());
-        ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
+        return false;
     }
 }
 
-// UTF-8 Encoding Function
+// Function to convert string to Base64
 export function toBase64(str) {
     return btoa(unescape(encodeURIComponent(str)));
 }
-
-// Make functions globally available
-window.getActorFolders = getActorFolders;
-window.openFolderUploadDialog = openFolderUploadDialog;
-window.uploadActorsFromFolderToGitHub = uploadActorsFromFolderToGitHub;
-window.uploadToGitHub = uploadToGitHub;
-window.toBase64 = toBase64;
