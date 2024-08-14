@@ -1,12 +1,12 @@
 {
-  "id": "waymakers-gm-tools",
-  "title": "Waymakers GM Tools",
+  "id": "character-vault",
+  "title": "Character Vault",
   "version": "1.0.0",
   "compatibility": {
     "minimum": "11.315",
     "verified": "12"
   },
-  "description": "A set of tools for Game Masters in our Rifts® Waymakers West Marches game.",
+  "description": "Store actor JSON files in a GitHub repo and import the data into your world and export back to the repo. Useful for managing West Marches or society type play where players can bring their actors through a persistent world with multiple Game Masters and Foundry VTT servers.",
   "authors": [
     {
       "name": "Venatus Vinco",
@@ -16,8 +16,11 @@
       "flags": {}
     }
   ],
-  "url": "www.savagerifts.com",
-  "esmodules": ["./index.js"],
-	"manifest": "https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/savagerifts/module.json",
-	"download": "https://venatus-fvtt-assets.s3.ca-central-1.amazonaws.com/savagerifts/module.zip"
+  "url": "https://github.com/sigil-johnstevens/character-vault",
+  "manifest": "This is auto replaced",
+  "download": "This is auto replaced",
+  "license": "https://github.com/sigil-johnstevens/character-vault/blob/main/LICENSE.md",
+  "readme": "https://github.com/sigil-johnstevens/character-vault#readme",
+  "bugs": "https://github.com/sigil-johnstevens/character-vault/issues",
+  "changelog": "https://github.com/sigil-johnstevens/character-vault/blob/main/CHANGELOG.md"
 }

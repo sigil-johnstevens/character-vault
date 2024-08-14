@@ -1,4 +1,4 @@
-const MODULE_ID = "waymakers-gm-tools";
+const MODULE_ID = "character-vault";
 
 export async function fetchGitHubActorList() {
     const repo = game.settings.get(MODULE_ID, "githubRepo");

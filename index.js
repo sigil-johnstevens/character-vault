@@ -1,4 +1,4 @@
-const MODULE_ID = "waymakers-gm-tools";
+const MODULE_ID = "character-vault";
 
 // Register Access Token, Path, and Repo as Game Settings
 Hooks.once('init', () => {

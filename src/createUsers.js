@@ -1,23 +1,29 @@
 export async function generateUsers(sessionName, userInput) {
-    // Function to generate a random password
-    function generatePass(length = 8) {
-        let pass = '';
-        const str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$';
-        for (let i = 0; i < length; i++) {
-            const char = Math.floor(Math.random() * str.length);
-            pass += str.charAt(char);
+    // Function to generate a password using DinoPass API (defaults to simple)
+    async function generatePass() {
+        const response = await fetch(`https://www.dinopass.com/password/simple`);
+        if (response.ok) {
+            return response.text();
+        } else {
+            console.error("Failed to generate password using DinoPass");
+            return "fallbackPassword123";  // Fallback password in case the API fails
         }
-        return pass;
     }
 
-    // Function to create Random Folder Colour
-    function getRandomColor() {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-            color += letters[Math.floor(Math.random() * 16)];
+    async function getRandomColor() {
+        const response = await fetch('http://colormind.io/api/', {
+            method: 'POST',
+            body: JSON.stringify({ model: 'default' })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const color = data.result[0];
+            return `#${color.map(c => c.toString(16).padStart(2, '0')).join('')}`;
+        } else {
+            // Fallback to a basic random HEX color if the API fails
+            return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0').toUpperCase();
         }
-        return color;
     }
 
     // Create Users, Passwords, and Permissions
@@ -39,7 +45,7 @@ export async function generateUsers(sessionName, userInput) {
             type: "character",
             folder: folder.id
         });
-        let pw = generatePass();
+        let pw = await generatePass();  // Use DinoPass to generate the password
         const userCheck = game.users.find(u => u.name === username);
         let user;
         if (!userCheck) {
