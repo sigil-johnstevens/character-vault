@@ -1,14 +1,15 @@
 export async function generateUsers(sessionName, userInput) {
     // Function to generate a password using DinoPass API (defaults to simple)
     async function generatePass() {
-        const response = await fetch(`https://www.dinopass.com/password/simple`);
+        const passwordType = game.settings.get(MODULE_ID, "passwordStrength");
+        const response = await fetch(`https://www.dinopass.com/password/${passwordType}`);
         if (response.ok) {
             return response.text();
         } else {
             console.error("Failed to generate password using DinoPass");
             return "fallbackPassword123";  // Fallback password in case the API fails
         }
-    }
+    } 
 
     async function getRandomColor() {
         const response = await fetch('http://colormind.io/api/', {
