@@ -2,13 +2,13 @@
 
 These functions streamline character management and synchronization across different RPG sessions. More features and details will be added as the module evolves. This module assumes basic knowledge of GitHub including making a repository and setting up access tokens. You can learn more by consulting [GitHub Docs](https://docs.github.com/en)
 
-![Video](media/workflow.webm)
-
 ## Character Vault - Interface
 
 The Character Vault provides powerful tools for managing and syncing Foundry VTT Actors across multiple games. Below are the key functions available via buttons in the Actor Directory.
 
 ### Generate Users
+
+![Video](media/generate-users.webm)
 
 Quickly create multiple users and Actors:
 
@@ -21,12 +21,16 @@ Quickly create multiple users and Actors:
 
 ### Upload Folder to GitHub
 
+![Video](media/export.webm)
+
 Upload all actors in a selected folder to a GitHub repository to save any advancement or updates from the session:
 
 - Choose the folder containing the actors.
-- Uploads all actors to GitHub with confirmation notifications.
+- Uploads all actors to GitHub with confirmation notifications (note this overwirtes previous versions of the same actor).
 
 ### Import from GitHub
+
+![Video](media/import.webm)
 
 Import Actors from a GitHub repository:
 
@@ -35,11 +39,15 @@ Import Actors from a GitHub repository:
 
 ### Remove All Non-GM Users
 
+![Video](media/remove.webm)
+
 - Easily remove all non-GM users from your game. Useful for resetting the game before a new session.
 
 # Character Vault - Game Settings
 
 The Character Vault module includes several configurable settings to interface with GitHub for character management.
+
+![Video](media/settings.webm)
 
 ### GitHub Repository
 
