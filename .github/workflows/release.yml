@@ -42,7 +42,7 @@ jobs:
         name: ${{ github.event.release.name }}
         draft: ${{ github.event.release.unpublished }}
         prerelease: ${{ github.event.release.prerelease }}
-        token: ${{ secrets.ACTION_TOKEN }}
+        token: ${{ secrets.ACTION_PAT }}
         artifacts: './module.json, ./module.zip'
         tag: ${{ github.event.release.tag_name }}
         body: ${{ github.event.release.body }}
