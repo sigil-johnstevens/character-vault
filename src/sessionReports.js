@@ -79,14 +79,14 @@ export async function showSessionReportForm() {
     });
 }
 
-function getFolderOptions(type = "Actor") {
+export function getFolderOptions(type = "Actor") {
     // Fetch all folders of the specified type (e.g., "Actor")
     const folders = game.folders.filter(folder => folder.type === type);
     return folders.map(folder => `<option value="${folder.id}">${folder.name}</option>`).join('');
 }
 
 // Function to fetch actor names from a folder ID and return them as a comma-separated list
-async function fetchActorsFromFolderById(folderId) {
+export async function fetchActorsFromFolderById(folderId) {
     const folder = game.folders.get(folderId); // Get folder by ID
     if (!folder || folder.type !== "Actor") {
         console.error(`Folder with ID "${folderId}" not found or is not an Actor folder.`);
@@ -106,7 +106,7 @@ async function fetchActorsFromFolderById(folderId) {
 }
 
 // Function to post the session report to Discord
-async function postSessionReportToDiscord(data) {
+export async function postSessionReportToDiscord(data) {
     const webhookUrl = game.settings.get(MODULE_ID, "discordWebhookUrl");
     if (!webhookUrl) {
         ui.notifications.error("Discord Webhook URL is not configured.");
@@ -114,7 +114,7 @@ async function postSessionReportToDiscord(data) {
     }
 
     const payload = {
-        content: `## ${data.gameTitle} Session Report
+        content: `##  Session Report: ${data.gameTitle}
         **Date:** ${data.date} 
         **Time:** ${data.time}
         **Game Master:** ${data.gameMaster}

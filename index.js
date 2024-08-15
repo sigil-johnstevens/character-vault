@@ -64,7 +64,7 @@ Hooks.once('init', () => {
         default: "",
     });
     game.settings.register(MODULE_ID, "discordBotName", {
-        name: "Discord Image",
+        name: "Discord Bot Name",
         hint: "Enter the Name you want to appear when your Discord Bot posts",
         scope: "world",
         config: true,

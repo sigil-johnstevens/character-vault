@@ -13,73 +13,36 @@ Player level users can use the right click context menu on an Owned Actor to acc
 
 Additional bulk actions and utility functions are available to Game Master's via buttons in the Actor Directory.
 
-### Generate Users
+- **Generate Users**: Quickly create multiple users and Actors:
+  - Define a folder for storing Actors.
+  - Provide a comma-separated list of usernames (eg: Tom,Dick,Harry).
+  - Assign randomly generated passwords using the DinoPass API.
+  - Assign GM macro bar 5 to all users.
+  - Create a blank actor for each user and assigns it to them
+  - Create a chat message with all created usernames and passwords
+- **Upload Folder to GitHub**: Upload all actors in a selected folder to a GitHub repository to save any advancement or updates from the session (note this overwirtes previous versions of the same actor in the repo). Choose the folder containing the actors upload them to GitHub with confirmation notifications .
+- **Import from GitHub**: Use Import from GitHub button to match and import a folder of actors from GitHub to your game.
+- **Remove All Non-GM Users**: Removes all non-GM users from your game. Useful for resetting the game before a new session.
+- **File Session Report**: Choose a folder of actors and complete the form to post a session report to Discord via a webhook.
 
-Quickly create multiple users and Actors:
-
-- Define a folder for storing Actors.
-- Provide a comma-separated list of usernames (eg: Tom,Dick,Harry).
-- Assign randomly generated passwords using the DinoPass API.
-- Assign GM macro bar 5 to all users.
-- Create a blank actor for each user and assigns it to them
-- Create a chat message with all created usernames and passwords
-
-### Upload Folder to GitHub
-
-Upload all actors in a selected folder to a GitHub repository to save any advancement or updates from the session:
-
-- Choose the folder containing the actors.
-- Uploads all actors to GitHub with confirmation notifications (note this overwirtes previous versions of the same actor in the repo).
-
-### Import from GitHub
-
-Import Actors from a GitHub repository:
-
-- Use Import from GitHub button to match and import a folder of actors from GitHub to your game.
-
-### Remove All Non-GM Users
-
-- Easily remove all non-GM users from your game. Useful for resetting the game before a new session.
-
-## Character Vault - Game Settings
+## Game Settings
 
 The Character Vault module includes several configurable settings to interface with GitHub for character management. These settings must be configured for the module's GitHub integration features to function properly.
 
-### **GitHub Repository**
+### GitHub Settings
 
-This is the name of the repository on GitHub. Only `username/repo-name`. For example this module is `sigil-johnstevens/character-vault`.
+- **GitHub Repository**: This is the name of the repository on GitHub. Only `username/repo-name`. For example this module is `sigil-johnstevens/character-vault`.
+- **GitHub Path**: The folder or sub folder where the relevant actor data is stored. You can set up multiple folders for different groups/games if desired. Default is a simple `actors` folder.
+- **GitHub Personal Access Token**" This is the area where the GitHub user enters their [GitHub Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). The token must have Content read/write access.
 
-- **Name**: `GitHub Repository`
-- **Description**: Set the GitHub repository where your actor JSON files are stored.
-- **Default**: `yourRepo`
-- **Scope**: `world`
+### User Settings
 
-### **GitHub Path**
+- **Password Strength**: The module uses the [DinoPass API](https://www.dinopass.com/api) to generate user passwords. Simple passwords only have lower case letters and numbers. Strong passwords have mixed upper and lower case letters, a special character (like @, $, ! and so on) plus some numbers.
 
-The folder or sub folder where the relevant actor data is stored. You can set up multiple folders for different groups/games if desired. Default is a simple `actors` folder.
+### Discord Settings
 
-- **Name**: `GitHub Path`
-- **Description**: Define the path within the GitHub repository to the folder containing the actor JSON files.
-- **Default**: `actors`
-- **Scope**: `world`
-
-### **GitHub Personal Access Token**
-
-This is the area where the GitHub user enters their [GitHub Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). The token must have Content read/write access.
-
-- **Name**: `GitHub Personal Access Token`
-- **Description**: Enter your GitHub Personal Access Token (PAT) to authenticate access to your repository.
-- **Default**: `yourPAT`
-- **Scope**: `world`
-
-### **Password Strength**
-
-The module uses the [DinoPass API](https://www.dinopass.com/api) to generate user passwords. Simple passwords only have lower case letters and numbers. Strong passwords have mixed upper and lower case letters, a special character (like @, $, ! and so on) plus some numbers.
-
-- **Name**: `Password Strength`
-- **Description**: Select the type of password generated.
-- **Default**: `simple`
-- **Choices**: `simple` or `strong`
-- **Scope**: `world`
+- **Discord Web Hook URL**: Enter the [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) of a Discord channel or thread where the session report will be posted. You may need to get this from a server admin if you do not have intergrations access.
+- **Discord Image**: A public url to the avatar image you want for your Discord bot posts.
+- **Discord Bot Name**: Name of Discord bot when posting session reports.
 
 ---
