@@ -1,5 +1,7 @@
 const MODULE_ID = "character-vault";
 
+
+// Get list of actors  from GitHub
 export async function fetchGitHubActorList() {
     const repo = game.settings.get(MODULE_ID, "githubRepo");
     const path = game.settings.get(MODULE_ID, "githubPath");
@@ -25,7 +27,7 @@ export async function fetchGitHubActorList() {
     }
 }
 
-// For context menu
+// Single Actor import function for use in right click context menu
 export async function openImportDialog() {
     const repo = game.settings.get(MODULE_ID, "githubRepo");
     const path = game.settings.get(MODULE_ID, "githubPath");
@@ -85,7 +87,7 @@ export async function openImportDialog() {
     });
 }
 
-// New openFolderImportDialog for Multiple Actors Import
+// Multiple Actors Import for UI button
 export async function openFolderImportDialog() {
     const actorList = await fetchGitHubActorList();
     const folder = await promptForActorFolder();
@@ -146,12 +148,14 @@ export async function openFolderImportDialog() {
     });
 }
 
-
+// this is a duplicate function from upLoadActors. Maybe can import or roll it into the promptFor function
 export async function getActorFolders() {
     return game.folders.filter(f => f.type === "Actor");
 }
 
+// Choose which Actor folder to use for multiple import 
 export async function promptForActorFolder() {
+    // Reduce Actors Folder into a choices object. I do this different ways in differnt places for some reason.
     return new Promise(resolve => {
         getActorFolders().then(folders => {
             const folderChoices = folders.reduce((acc, folder) => {
@@ -201,6 +205,7 @@ export async function promptForActorFolder() {
     });
 }
 
+// Function to import the actor from GitHub to Foundry
 export async function importActorFromGitHubToActor(fileName, actorId) {
     const repo = game.settings.get(MODULE_ID, "githubRepo");
     const path = game.settings.get(MODULE_ID, "githubPath");
