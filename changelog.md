@@ -1,5 +1,9 @@
 # Character Vault
 
+## 1.1.0
+
+- Add Session Report function
+
 ## 1.0.2
 
 - Use Application v2 Dialogs

@@ -45,12 +45,38 @@ Hooks.once('init', () => {
         },
         default: "simple",
     });
+    // Registering Settings for the Discord Session Reports
 
+    game.settings.register(MODULE_ID, "discordWebhookUrl", {
+        name: "Discord Webhook URL",
+        hint: "Enter the Webhook URL from Discord to which you want to post session reports.",
+        scope: "world",
+        config: true,
+        type: String,
+        default: "",
+    });
+    game.settings.register(MODULE_ID, "discordImgUrl", {
+        name: "Discord Image",
+        hint: "Enter the Optional Avatar Image For Your Discord Bot",
+        scope: "world",
+        config: true,
+        type: String,
+        default: "",
+    });
+    game.settings.register(MODULE_ID, "discordBotName", {
+        name: "Discord Bot Name",
+        hint: "Enter the Name you want to appear when your Discord Bot posts",
+        scope: "world",
+        config: true,
+        type: String,
+        default: "",
+    });
 });
 
 import { generateUsers } from './src/createUsers.js';
 import { fetchGitHubActorList, openImportDialog, openFolderImportDialog, importActorFromGitHubToActor } from './src/importActors.js';
 import { openFolderUploadDialog, uploadActorsFromFolderToGitHub, uploadToGitHub, uploadActorToGitHub, toBase64 } from './src/uploadActors.js';
+import { showSessionReportForm, getFolderOptions, fetchActorsFromFolderById, postSessionReportToDiscord } from './src/sessionReports.js'
 
 Hooks.once("ready", () => {
     window.generateUsers = generateUsers;
@@ -63,6 +89,10 @@ Hooks.once("ready", () => {
     window.uploadToGitHub = uploadToGitHub;
     window.toBase64 = toBase64;
     window.uploadActorToGitHub = uploadActorToGitHub;
+    window.showSessionReportForm = showSessionReportForm;
+    window.getFolderOptions = getFolderOptions;
+    window.fetchActorsFromFolderById = fetchActorsFromFolderById;
+    window.postSessionReportToDiscord = postSessionReportToDiscord;
     console.log("Character Vault: Functions are now globally available.");
 });
 
@@ -108,6 +138,12 @@ Hooks.on('renderActorDirectory', (app, html, data) => {
         openFolderUploadDialog();
     });
 
+    // Add a button for uploading actors from a folder to GitHub
+    const showSessionReportButton = $('<button class="session-report-button">File a Session Report</button>');
+    showSessionReportButton.on('click', () => {
+        showSessionReportForm();
+    });
+
     // Create a container for the buttons and append it to the footer
     const buttonContainer = $('<div class="custom-buttons"></div>');
     buttonContainer.append(header);
@@ -115,6 +151,7 @@ Hooks.on('renderActorDirectory', (app, html, data) => {
     buttonContainer.append(importFromGitHubButton);
     buttonContainer.append(deleteNonGMUsersButton);
     buttonContainer.append(uploadFolderButton);
+    buttonContainer.append(showSessionReportButton);
     html.find('.directory-footer').append(buttonContainer);
 });
 
