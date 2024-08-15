@@ -45,7 +45,7 @@ Hooks.once('init', () => {
         },
         default: "simple",
     });
-    
+
 });
 
 import { generateUsers } from './src/createUsers.js';
@@ -73,40 +73,58 @@ Hooks.on('renderActorDirectory', (app, html, data) => {
     // Create the header
     const header = $('<h3 class="character-vault-header">Character Vault Controls</h3>');
 
-    // Add a button for generating users
+    // Add a button for generating users using jQuery
+    // Add a button for generating users using jQuery
+    // Add a button for generating users using jQuery
     const generateUsersButton = $('<button class="generate-users-button">Generate Users</button>');
     generateUsersButton.on('click', () => {
-        new Dialog({
+        console.log("Generate Users button clicked"); // Debug log
+
+        foundry.applications.api.DialogV2.prompt({
             title: "Generate Users",
             content: `
-                <form>
-                    <div class="form-group">
-                        <label>Actor Folder Name:</label>
-                        <input type="text" name="sessionName" value="Heroes"/>
-                    </div>
-                    <div class="form-group">
-                        <label>Usernames (comma separated):</label>
-                        <input type="text" name="userInput"/>
-                    </div>
-                </form>
-            `,
-            buttons: {
-                generate: {
-                    label: "Generate",
-                    callback: (html) => {
-                        const sessionName = html.find('input[name="sessionName"]').val();
-                        const userInput = html.find('input[name="userInput"]').val();
-                        if (sessionName && userInput) {
-                            generateUsers(sessionName, userInput);
-                        }
+            <form>
+                <div class="form-group">
+                    <label>Actor Folder Name:</label>
+                    <input type="text" name="sessionName" value="Heroes"/>
+                </div>
+                <div class="form-group">
+                    <label>Usernames (comma separated):</label>
+                    <input type="text" name="userInput"/>
+                </div>
+            </form>
+        `,
+            ok: { // Configuration for the "Generate" button
+                label: "Generate",
+                callback: async (event, button) => {
+                    console.log("Generate button clicked"); // Debug log
+                    // Using button.form to get the form data
+                    const form = button.form;
+                    const formData = new FormData(form);
+                    const sessionName = formData.get('sessionName');
+                    const userInput = formData.get('userInput');
+
+                    if (sessionName && userInput) {
+                        console.log("Generating users with", sessionName, userInput); // Debug log
+                        // Call your generateUsers function with the form data
+                        await generateUsers(sessionName, userInput);
                     }
-                },
-                cancel: {
-                    label: "Cancel"
                 }
+            },
+            cancel: { // Configuration for the "Cancel" button
+                label: "Cancel"
+            },
+            window: { // Properties of the outer frame
+                title: "Generate Users",
+                icon: "fa-solid fa-user-plus" // Adjust the icon as needed
+            },
+            position: { // Properties of the window size and position
+                width: 600,
+                height: "auto"
             }
-        }).render(true);
+        });
     });
+
 
     // Add a button for importing from GitHub
     const importFromGitHubButton = $('<button class="import-github-button">Import from GitHub</button>');

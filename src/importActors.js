@@ -25,41 +25,64 @@ export async function fetchGitHubActorList() {
     }
 }
 
-export async function openImportDialog(actorId) {
+// For context menu
+export async function openImportDialog() {
     const repo = game.settings.get(MODULE_ID, "githubRepo");
     const path = game.settings.get(MODULE_ID, "githubPath");
     const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
 
-    const actorList = await fetchGitHubActorList(repo, path, yourPAT);
-    
-    // Filter out actors that the user doesn't own
-    const actorsList = game.actors
-        .filter(actor => actor.isOwner)  // Only include actors owned by the user
-        .map(actor => `<option value="${actor.id}">${actor.name}</option>`)
-        .join('');
+    const githubActors = await fetchGitHubActorList(repo, path, yourPAT);
+    const githubChoices = githubActors.reduce((acc, actor) => {
+        acc[actor.fileName] = actor.name;
+        return acc;
+    }, {});
 
-    new Dialog({
+    const ownedActors = game.actors.filter(actor => actor.isOwner);
+    const foundryChoices = ownedActors.reduce((acc, actor) => {
+        acc[actor.id] = actor.name;
+        return acc;
+    }, {});
+
+    const githubActorOptions = Object.entries(githubChoices).map(([value, name]) =>
+        `<option value="${value}">${name}</option>`
+    ).join('');
+    const foundryActorOptions = Object.entries(foundryChoices).map(([value, name]) =>
+        `<option value="${value}">${name}</option>`
+    ).join('');
+
+    const content = `
+        <form>
+            <div class="form-group">
+                <label>GitHub Actors:</label>
+                <select name="githubActor">${githubActorOptions}</select>
+            </div>
+            <div class="form-group">
+                <label>Foundry Actors:</label>
+                <select name="foundryActor">${foundryActorOptions}</select>
+            </div>
+        </form>
+    `;
+
+    foundry.applications.api.DialogV2.prompt({
         title: "Import Actor from GitHub",
-        content: `
-        <p>Select an actor JSON file from GitHub:</p>
-        <select id="fileSelect">${actorList.map(actor => `<option value="${actor.fileName}">${actor.name}</option>`).join('')}</select>
-        <p>Select an existing actor to overwrite:</p>
-        <select id="actorSelect">${actorsList}</select>
-      `,
-        buttons: {
-            import: {
-                label: "Import",
-                callback: async (html) => {
-                    const selectedFile = html.find("#fileSelect")[0].value;
-                    const selectedActorId = html.find("#actorSelect")[0].value;
-                    await importActorFromGitHubToActor(selectedFile, selectedActorId);
+        content: content,
+        modal: true,
+        ok: {
+            label: "Import",
+            callback: async (event, button, html) => {
+                const form = button.form; // Get the form from the button context
+                const formData = new FormData(form);
+                const selectedGithubActor = formData.get("githubActor");
+                const selectedFoundryActor = formData.get("foundryActor");
+                if (selectedGithubActor && selectedFoundryActor) {
+                    await importActorFromGitHubToActor(selectedGithubActor, selectedFoundryActor);
                 }
-            },
-            cancel: {
-                label: "Cancel"
             }
+        },
+        cancel: {
+            label: "Cancel"
         }
-    }).render(true);
+    });
 }
 
 // New openFolderImportDialog for Multiple Actors Import
@@ -69,63 +92,94 @@ export async function openFolderImportDialog() {
 
     if (!folder) return;
 
-    const folderActors = folder.contents.map(actor => ({
-        id: actor.id,
-        name: actor.name
-    }));
+    // Reduce GitHub actors into a choices object
+    const githubChoices = actorList.reduce((acc, actor) => {
+        acc[actor.fileName] = actor.name;
+        return acc;
+    }, {});
 
-    let dialogContent = folderActors.map(actor => {
+    // Form field for each actor in the folder
+    const folderActorFields = folder.contents.map(actor => {
         return `
-        <div class="form-group">
-            <label>${actor.name}:</label>
-            <select name="${actor.id}">
-                ${actorList.map(gitActor => `<option value="${gitActor.fileName}">${gitActor.name}</option>`).join('')}
-            </select>
-        </div>
+            <div class="form-group">
+                <label>${actor.name}</label>
+                <select name="${actor.id}">
+                    ${Object.entries(githubChoices).map(([fileName, name]) =>
+            `<option value="${fileName}">${name}</option>`
+        ).join('')}
+                </select>
+            </div>
         `;
     }).join('');
 
-    new Dialog({
+    const content = `<form>${folderActorFields}</form>`;
+
+    foundry.applications.api.DialogV2.prompt({
         title: "Import Actors from GitHub",
-        content: `<form>${dialogContent}</form>`,
-        buttons: {
-            import: {
-                label: "Import",
-                callback: async (html) => {
-                    for (const actor of folderActors) {
-                        const selectedFile = html.find(`select[name="${actor.id}"]`).val();
+        content: content,
+        modal: true,
+        ok: {
+            label: "Import",
+            callback: async (event, button, html) => {
+                const form = button.form; // Get the form from the button context
+                const formData = new FormData(form);
+
+                for (const actor of folder.contents) {
+                    const selectedFile = formData.get(actor.id);
+                    if (selectedFile) {
                         await importActorFromGitHubToActor(selectedFile, actor.id);
                     }
                 }
-            },
-            cancel: {
-                label: "Cancel"
             }
+        },
+        cancel: {
+            label: "Cancel"
+        },
+        window: {
+            title: "Match Actors to GitHub Files",
+            icon: "fa-solid fa-upload"
+        },
+        position: {
+            width: 400,
+            height: "auto"
         }
-    }).render(true);
+    });
 }
 
-async function promptForActorFolder() {
+
+export async function getActorFolders() {
+    return game.folders.filter(f => f.type === "Actor");
+}
+
+export async function promptForActorFolder() {
     return new Promise(resolve => {
-        const folders = game.folders.filter(f => f.type === "Actor");
+        getActorFolders().then(folders => {
+            const folderChoices = folders.reduce((acc, folder) => {
+                acc[folder.id] = folder.name;
+                return acc;
+            }, {});
 
-        let folderOptions = folders.map(folder => `<option value="${folder.id}">${folder.name}</option>`).join('');
-
-        new Dialog({
-            title: "Select Actor Folder",
-            content: `
+            const content = `
                 <form>
                     <div class="form-group">
                         <label>Select a folder:</label>
-                        <select id="folderSelect">${folderOptions}</select>
+                        <select name="folderId" id="folderSelect">
+                            ${Object.entries(folderChoices).map(([id, name]) =>
+                `<option value="${id}">${name}</option>`
+            ).join('')}
+                        </select>
                     </div>
                 </form>
-            `,
-            buttons: {
-                select: {
+            `;
+
+            foundry.applications.api.DialogV2.prompt({
+                title: "Select Actor Folder",
+                content: content,
+                modal: true,
+                ok: {
                     label: "Select",
-                    callback: (html) => {
-                        const folderId = html.find("#folderSelect").val();
+                    callback: async (event, button, html) => {
+                        const folderId = button.form.elements.folderId.value;
                         const folder = game.folders.get(folderId);
                         resolve(folder);
                     }
@@ -133,9 +187,17 @@ async function promptForActorFolder() {
                 cancel: {
                     label: "Cancel",
                     callback: () => resolve(null)
+                },
+                window: {
+                    title: "Folder Selection",
+                    icon: "fa-solid fa-folder-open"
+                },
+                position: {
+                    width: 400,
+                    height: "auto"
                 }
-            }
-        }).render(true);
+            });
+        });
     });
 }
 

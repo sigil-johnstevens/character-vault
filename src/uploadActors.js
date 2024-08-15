@@ -6,31 +6,42 @@ export function getActorFolders() {
 }
 
 // Step 2: Create a Dialog for Folder Selection
-export function openFolderUploadDialog() {
-    const actorFolders = getActorFolders();
+export async function openFolderUploadDialog() {
+    const choices = getActorFolders().reduce((acc, folder) => {
+        acc[folder.id] = folder.name;
+        return acc;
+    }, {});
 
-    new Dialog({
-        title: "Select Actor Folder",
-        content: `<p>Select a folder to upload all actors from it to GitHub.</p>
-                  <select id="folderSelect">
-                      ${actorFolders.map(folder => `<option value="${folder.id}">${folder.name}</option>`).join('')}
-                  </select>`,
-        buttons: {
-            upload: {
-                label: "Upload",
-                callback: async (html) => {
-                    const folderId = html.find("#folderSelect")[0].value;
-                    const folder = game.folders.get(folderId);
-                    await uploadActorsFromFolderToGitHub(folder);
-                }
-            },
-            cancel: {
-                label: "Cancel"
+    const input = new foundry.data.fields.StringField({ // using a StringField to make use of the FormGroup method.
+        required: true, // this removes blank option
+        choices: choices, // this makes it a <select>
+        label: "Folder",
+        hint: "Select a folder to upload all actors from it to GitHub."
+    }).toFormGroup({}, { name: "folderId" }).outerHTML;
+
+    const content = `<fieldset>${input}</fieldset>`;
+
+    await foundry.applications.api.DialogV2.prompt({
+        content: content,
+        modal: true, // makes the rest of the window uninteractive while this dialog is present
+        ok: { // specific to DialogV2.prompt, changes to the default OK button
+            label: "Upload",
+            callback: async (event, button, html) => {
+                const id = button.form.elements.folderId.value;
+                const folder = game.folders.get(id);
+                uploadActorsFromFolderToGitHub(folder);
             }
+        },
+        window: { // properties of the outer frame
+            title: "Upload",
+            icon: "fa-solid fa-upload"
+        },
+        position: { // properties of the window size and position
+            width: 400,
+            height: "auto"
         }
-    }).render(true);
+    });
 }
-
 // Step 3: Function to Upload Actors from Selected Folder
 export async function uploadActorsFromFolderToGitHub(folder) {
     const repo = game.settings.get(MODULE_ID, "githubRepo");
@@ -72,6 +83,8 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
     const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodedName}`;
 
     let sha = null;
+
+    // Check if the file already exists on GitHub
     const checkResponse = await fetch(url, {
         method: 'GET',
         headers: {
@@ -81,9 +94,10 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
 
     if (checkResponse.ok) {
         const data = await checkResponse.json();
-        sha = data.sha;  // Get the current sha value
+        sha = data.sha;  // Get the current sha value for updating
     }
 
+    // Upload the actor data to GitHub
     const response = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -92,8 +106,8 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
         },
         body: JSON.stringify({
             message: `Updating character ${actor.name}`,
-            content: toBase64(jsonContent),
-            sha: sha,  // Include sha if the file exists
+            content: toBase64(jsonContent), // Convert JSON content to base64
+            sha: sha,  // Include sha if the file exists (update)
             branch: "main",  // Or another branch if needed
         }),
     });
