@@ -4,10 +4,10 @@ The Character Vault provides powerful tools for managing and syncing Foundry VTT
 
 ## User Interface
 
-Player level users can use the right click context menu on an Owned Actor to access import and export functions.
+Players can use the right click context menu on an Owned Actor to access import functions only.
 
 - **Import from GitHub:** Overwrite an existing owned actor with one from GitHub (best done on blank Actors).
-- **Export to GitHub:** Send Owned Actor data to GitHub with confirmation notification (note this overwirtes previous versions of the same actor in the repo)
+- **Export to GitHub (GM Only):** Send single Actor data to GitHub with confirmation notification (note this overwirtes previous versions of the same actor in the repo)
 
 ## Game Master Interface
 

@@ -1,5 +1,9 @@
 # Character Vault
 
+## 1.1.1
+
+- Change export permissions to Game Master only
+
 ## 1.1.0
 
 - Add Session Report function
@@ -11,7 +15,7 @@
 
 ## 1.0.1
 
-- Updated function access based on User permissions.
+- Updated function access based on User permissions
 
 ## 1.0.0
 

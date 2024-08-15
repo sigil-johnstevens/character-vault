@@ -35,7 +35,7 @@ export async function generateUsers() {
             icon: "fa-solid fa-user-plus"
         },
         position: {
-            width: 400,
+            width: 800,
             height: "auto"
         }
     });

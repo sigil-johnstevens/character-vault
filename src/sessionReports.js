@@ -120,7 +120,8 @@ export async function postSessionReportToDiscord(data) {
         **Game Master:** ${data.gameMaster}
         **Heroes**: ${data.actors}
         **Received an Advance**: ${data.earnAdvance}
-        **Session Report:** ${data.sessionReport}`,
+        **Session Report:** 
+        ${data.sessionReport}`,
         username: game.settings.get(MODULE_ID, "discordBotName"),
         avatar_url: game.settings.get(MODULE_ID, "discordImgUrl") // Optional: discordImgUrl
     };

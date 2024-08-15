@@ -171,17 +171,20 @@ Hooks.on('getActorDirectoryEntryContext', (html, options) => {
         }
     });
 
-    options.push({
-        name: "Export to GitHub",
-        icon: '<i class="fas fa-upload"></i>',
-        callback: async li => {
-            const actorId = li.attr('data-document-id');  // Get the actor ID from the context
-            const actor = game.actors.get(actorId);
-            if (actor && actor.isOwner) {
-                await uploadActorToGitHub(actor);
-            } else {
-                ui.notifications.warn("You do not own this actor.");
+    if (game.user.isGM) {
+        options.push({
+            name: "Export to GitHub",
+            icon: '<i class="fas fa-upload"></i>',
+            callback: async li => {
+                const actorId = li.attr('data-document-id');  // Get the actor ID from the context
+                const actor = game.actors.get(actorId);
+                if (actor && actor.isOwner) {
+                    await uploadActorToGitHub(actor);
+                } else {
+                    ui.notifications.warn("You do not own this actor.");
+                }
             }
-        }
-    });
+        });
+    }
+
 });
