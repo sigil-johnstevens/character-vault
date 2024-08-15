@@ -1,50 +1,46 @@
 // sessionReports.js
-export const MODULE_ID = "character-vault";
+const MODULE_ID = "character-vault";
 
-// Registering a game setting for the Discord webhook URL
-Hooks.once('init', () => {
-    game.settings.register(MODULE_ID, "discordWebhookUrl", {
-        name: "Discord Webhook URL",
-        hint: "Enter the Webhook URL from Discord to which you want to post session reports.",
-        scope: "world",
-        config: true,
-        type: String,
-        default: "",
-    });
-});
-
-// Function to show the session report form and handle the submission
+// Function to send in a session report
 export async function showSessionReportForm() {
-    const actors = await fetchActorsFromFolder("Session Characters"); // Fetch actors from a specified folder
-    const actorOptions = actors.map(actor => `<option value="${actor.id}">${actor.name}</option>`).join('');
+    const folderOptions = getFolderOptions("Actor"); // Get folder options for the "Actor" type
 
     const content = `
-        <form>
-            <div class="form-group">
-                <label>Date:</label>
-                <input type="date" name="date" value="${new Date().toISOString().substr(0, 10)}"/>
+    <form>
+        <div class="form-group">
+            <label>Select Folder:</label>
+            <select name="folderId">${folderOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Title:</label>
+            <input type="text" name="gameTitle"/>
+        </div>
+        <div class="form-group">
+            <label>Date:</label>
+            <input type="date" name="date" value="${new Date().toISOString().substr(0, 10)}"/>
+        </div>
+        <div class="form-group">
+            <label>Time:</label>
+            <input type="time" name="time" value="${new Date().toLocaleTimeString('en-US', { hour12: false })}"/>
+        </div>
+        <div class="form-group">
+            <label>Game Master:</label>
+            <input type="text" name="gameMaster" value="${game.user.name}" readonly/>
+        </div>
+        <div class="form-group">
+            <label>Advanced:</label>
+            <div>
+                <input type="radio" id="advanceYes" name="earnAdvance" value="Yes" checked/>
+                <label for="advanceYes">Yes</label>
+                <input type="radio" id="advanceNo" name="earnAdvance" value="No"/>
+                <label for="advanceNo">No</label>
             </div>
-            <div class="form-group">
-                <label>Time:</label>
-                <input type="time" name="time" value="${new Date().toLocaleTimeString('en-US', { hour12: false })}"/>
-            </div>
-            <div class="form-group">
-                <label>Game Master:</label>
-                <input type="text" name="gameMaster" value="${game.user.name}" readonly/>
-            </div>
-            <div class="form-group">
-                <label>Actors:</label>
-                <select name="actorId">${actorOptions}</select>
-            </div>
-            <div class="form-group">
-                <label>Advanced:</label>
-                <input type="radio" name="earnAdvance" checked>Yes</input> <input type="radio" name="earnAdvance">No</input>
-            </div>
-            <div class="form-group">
-                <label>Session Report:</label>
-                <textarea name="sessionReport" rows="6"></textarea>
-            </div>
-        </form>
+        </div>
+        <div class="form-group">
+            <label>Session Report:</label>
+            <textarea name="sessionReport" rows="6"></textarea>
+        </div>
+    </form>
     `;
 
     foundry.applications.api.DialogV2.prompt({
@@ -52,13 +48,18 @@ export async function showSessionReportForm() {
         content: content,
         ok: {
             label: "Submit",
-            callback: async (html) => {
-                const formData = new FormData(html[0]);
+            callback: async (event, button) => {
+                const formData = new FormData(button.form);
+                const folderId = formData.get('folderId');
+                const actors = await fetchActorsFromFolderById(folderId); // Fetch actors based on selected folder
+
                 const data = {
+                    gameTitle: formData.get('gameTitle'),
                     date: formData.get('date'),
                     time: formData.get('time'),
                     gameMaster: formData.get('gameMaster'),
-                    actorId: formData.get('actorId'),
+                    actors: actors, // Use the fetched actor list
+                    earnAdvance: formData.get('earnAdvance'),
                     sessionReport: formData.get('sessionReport')
                 };
                 await postSessionReportToDiscord(data);
@@ -78,10 +79,30 @@ export async function showSessionReportForm() {
     });
 }
 
-// Function to fetch actors from a specified folder
-async function fetchActorsFromFolder(folderName) {
-    const folder = game.folders.find(f => f.name === folderName && f.type === "Actor");
-    return folder ? folder.contents : [];
+function getFolderOptions(type = "Actor") {
+    // Fetch all folders of the specified type (e.g., "Actor")
+    const folders = game.folders.filter(folder => folder.type === type);
+    return folders.map(folder => `<option value="${folder.id}">${folder.name}</option>`).join('');
+}
+
+// Function to fetch actor names from a folder ID and return them as a comma-separated list
+async function fetchActorsFromFolderById(folderId) {
+    const folder = game.folders.get(folderId); // Get folder by ID
+    if (!folder || folder.type !== "Actor") {
+        console.error(`Folder with ID "${folderId}" not found or is not an Actor folder.`);
+        return '';
+    }
+
+    // Fetch actors that belong to this folder
+    const actors = game.actors.filter(actor => actor.folder?.id === folder.id);
+    if (actors.length === 0) {
+        console.warn(`No actors found in the folder with ID "${folderId}".`);
+        return '';
+    }
+
+    // Map the actor names and return them as a comma-separated string
+    const actorNames = actors.map(actor => actor.name);
+    return actorNames.join(', ');
 }
 
 // Function to post the session report to Discord
@@ -93,13 +114,15 @@ async function postSessionReportToDiscord(data) {
     }
 
     const payload = {
-        content: `**Session Report**
+        content: `## ${data.gameTitle} Session Report
         **Date:** ${data.date} 
         **Time:** ${data.time}
         **Game Master:** ${data.gameMaster}
+        **Heroes**: ${data.actors}
+        **Received an Advance**: ${data.earnAdvance}
         **Session Report:** ${data.sessionReport}`,
-        username: "Session Report Bot",
-        avatar_url: "https://example.com/image.png" // Optional: Link to a custom avatar image
+        username: game.settings.get(MODULE_ID, "discordBotName"),
+        avatar_url: game.settings.get(MODULE_ID, "discordImgUrl") // Optional: discordImgUrl
     };
 
     const response = await fetch(webhookUrl, {
