@@ -1,5 +1,10 @@
 # Character Vault
 
+## 1.0.2
+
+- Use Application v2 Dialogs
+- Set compatibility to Foundry VTT v12
+
 ## 1.0.1
 
 - Updated function access based on User permissions.
