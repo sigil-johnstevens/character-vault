@@ -1,13 +1,13 @@
 # Character Vault
 
-The Character Vault provides powerful tools for managing and syncing Foundry VTT Actors across multiple games. These functions streamline character management and synchronization across different RPG sessions. More features and details will be added as the module evolves. This module assumes basic knowledge of GitHub including making a repository and setting up access tokens. You can learn more by consulting [GitHub Docs](https://docs.github.com/en)
+The Character Vault provides powerful tools for managing and syncing Foundry VTT Actors across multiple games. These functions streamline character management and synchronization across different RPG sessions. More features and details will be added as the module evolves. This module assumes basic knowledge of GitHub, including creating a repository and setting up access tokens. You can learn more by consulting [GitHub Docs](https://docs.github.com/en)
 
 ## User Interface
 
-Players can use the right click context menu on an Owned Actor to access import functions only.
+Players can only use the right-click context menu on an Owned Actor to access import functions.
 
 - **Import from GitHub:** Overwrite an existing owned actor with one from GitHub (best done on blank Actors).
-- **Export to GitHub (GM Only):** Send single Actor data to GitHub with confirmation notification (note this overwirtes previous versions of the same actor in the repo)
+- **Export to GitHub (GM Only):** Send single Actor data to GitHub with confirmation notification (note this overwrites previous versions of the same actor in the repo)
 
 ## Game Master Interface
 
@@ -15,34 +15,40 @@ Additional bulk actions and utility functions are available to Game Master's via
 
 - **Generate Users**: Quickly create multiple users and Actors:
   - Define a folder for storing Actors.
-  - Provide a comma-separated list of usernames (eg: Tom,Dick,Harry).
+  - Provide a comma-separated list of usernames (e.g., Tom,Dick,Harry).
   - Assign randomly generated passwords using the DinoPass API.
   - Assign GM macro bar 5 to all users.
-  - Create a blank actor for each user and assigns it to them
+  - Create a blank actor for each user and assign it to them
   - Create a chat message with all created usernames and passwords
-- **Upload Folder to GitHub**: Upload all actors in a selected folder to a GitHub repository to save any advancement or updates from the session (note this overwirtes previous versions of the same actor in the repo). Choose the folder containing the actors upload them to GitHub with confirmation notifications .
-- **Import from GitHub**: Use Import from GitHub button to match and import a folder of actors from GitHub to your game.
-- **Remove All Non-GM Users**: Removes all non-GM users from your game. Useful for resetting the game before a new session.
+- **Upload Folder to GitHub**: Upload all actors in a selected folder to a GitHub repository to save any advancements or updates from the session (note that this overwrites previous versions of the same actor in the repo). Choose the folder containing the actors and upload them to GitHub with confirmation notifications.
+- **Import from GitHub**: Use the Import from GitHub button to match and import a folder of actors from GitHub to your game.
+- **Remove All Non-GM Users**: This option removes all non-GM users from your game. It is useful for resetting the game before a new session.
 - **File Session Report**: Choose a folder of actors and complete the form to post a session report to Discord via a webhook.
 
 ## Game Settings
 
-The Character Vault module includes several configurable settings to interface with GitHub for character management. These settings must be configured for the module's GitHub integration features to function properly.
+The Character Vault module includes several configurable settings to manage actors and file session reports via Discord.
 
 ### GitHub Settings
 
-- **GitHub Repository**: This is the name of the repository on GitHub. Only `username/repo-name`. For example this module is `sigil-johnstevens/character-vault`.
-- **GitHub Path**: The folder or sub folder where the relevant actor data is stored. You can set up multiple folders for different groups/games if desired. Default is a simple `actors` folder.
+To function correctly, these settings must be configured for the module's GitHub integration features.
+
+- **GitHub Repository**: This is the repository's name on GitHub. Only `username/repo-name`. For example, this module is `sigil-johnstevens/character-vault`.
+**GitHub Path**: The folder or subfolder where the relevant actor data is stored. If desired, you can set up multiple folders for different groups/games. The default is a simple `actors` folder.
 - **GitHub Personal Access Token**" This is the area where the GitHub user enters their [GitHub Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). The token must have Content read/write access.
 
 ### User Settings
 
-- **Password Strength**: The module uses the [DinoPass API](https://www.dinopass.com/api) to generate user passwords. Simple passwords only have lower case letters and numbers. Strong passwords have mixed upper and lower case letters, a special character (like @, $, ! and so on) plus some numbers.
+Currently, there is only one setting for user creation.
+
+** Password Strength **: The module uses the [DinoPass API] (https://www.dinopass.com/api) to generate user passwords. Simple passwords only have lowercase letters and numbers. Strong passwords have mixed upper- and lower-case letters, a special character (like @, $, !, and so on), and some numbers.
 
 ### Discord Settings
 
-- **Discord Web Hook URL**: Enter the [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) of a Discord channel or thread where the session report will be posted. You may need to get this from a server admin if you do not have intergrations access.
-- **Discord Image**: A public url to the avatar image you want for your Discord bot posts.
+The module can produce Session Reports and automatically post them to a Discord channel or thread using a webhook. The report automatically fills in Session Date, Session Time, Game Master, and Actors (from the selected folder). Users can customize the avatar and name of the Discord bot making the post.
+
+- **Discord WebHook URL**: Enter the [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) of a Discord channel or thread where the session report will be posted. If you do not have integrations access, you may need to get this from a server admin.
+- **Discord Image**: A public URL to the avatar image you want for your Discord bot posts.
 - **Discord Bot Name**: Name of Discord bot when posting session reports.
 
 ---
