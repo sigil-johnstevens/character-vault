@@ -52,44 +52,43 @@ async function processUserGeneration(sessionName, userInput) {
         consoleOutput += `${username.trim()}: ${pw}\n`;
     }
 
-    // Log output to the console
-    console.log(`Generated users and passwords:\n${consoleOutput}`);
-
-    // Generate a unique ID for the button
-    const getPasswordsButtonId = `getPasswordsButton-${Date.now()}`;
-
-    // Output to the chat with a "Get Passwords" button
+    // Generate the chat message content
     const content = `
         <p>Created ${userNames.length} user${userNames.length > 1 ? 's' : ''}.</p>
-        <button id="${getPasswordsButtonId}">Get Passwords</button>
+        <p>Use the button below to copy the passwords to the chat input for cut and paste:</p>
+        <pre>${consoleOutput}</pre>
+        <div>
+            <button class="dumpToChatInputButton">Dump to Chat Input</button>
+        </div>
     `;
-
-    // Create the chat message using the updated method
+    // Post the message to chat
     await getDocumentClass('ChatMessage').create({
         user: game.user.id,
         speaker: ChatMessage.getSpeaker(),
         content: content,
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
     });
-
-    // Attach the event listener after the chat message is rendered
-    Hooks.once('renderChatMessage', (message, html) => {
-        html.find(`#${getPasswordsButtonId}`).click(() => {
-            // Open a new DialogV2 with the text content
-            foundry.applications.api.DialogV2.prompt({
-                title: "User Credentials",
-                content: `<textarea readonly style="width:100%; height:200px;">${consoleOutput}</textarea>`,
-                label: "Close", // The label for the button
-                callback: () => { }, // No additional action needed on close
-                options: {
-                    classes: ['dialog-v2'],
-                    width: 400, // Width of the dialog
-                    height: "auto" // Automatically adjust height
-                }
-            });
-        });
-    });
 }
+
+// Attach a persistent listener to handle the dump button clicks
+Hooks.on('renderChatMessage', (message, html) => {
+    html.find('.dumpToChatInputButton').click(function () {
+        const messageContent = $(this).closest('.message-content').find('pre').text().trim();
+        dumpToChatInput(messageContent);
+    });
+});
+
+function dumpToChatInput(text) {
+    // Find the chat input box element
+    const chatInput = ui.chat.element.find("textarea");
+
+    // Set the text content in the chat input box
+    chatInput.val(text);
+
+    // Automatically focus on the chat input box
+    chatInput.focus();
+}
+
 
 // create new Actor folder
 async function createOrFindFolder(sessionName) {
