@@ -47,7 +47,7 @@ Currently, there is only one setting for user creation.
 
 The module can produce Session Reports and automatically post them to a Discord channel or thread using a webhook. The report automatically fills in Session Date, Session Time, Game Master, and Actors (from the selected folder). Users can customize the avatar and name of the Discord bot making the post.
 
-- **Discord WebHook URL**: Enter the [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) of a Discord channel or thread where the session report will be posted. If you do not have integrations access, you may need to get this from a server admin.
+- ** Discord WebHook URL **: Enter the [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) of a Discord channel or thread where the session report will be posted. If you do not have integrations access, you may need to get this from a server admin.
 - **Discord Image**: A public URL to the avatar image you want for your Discord bot posts.
 - **Discord Bot Name**: Name of Discord bot when posting session reports.
 
