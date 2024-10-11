@@ -1,12 +1,9 @@
 # Character Vault
 
-## 1.1.2
-
-- Fix failed api call for color creator
-
 ## 1.1.1
 
 - Change export permissions to Game Master only
+- Fix failed api call for color creator
 
 ## 1.1.0
 
