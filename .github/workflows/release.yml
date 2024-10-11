@@ -50,6 +50,7 @@ jobs:
     # Publish to Foundry VTT
     - name: Publish Module to FoundryVTT Website
       id: publish-to-foundry-website
+      continue-on-error: true
       uses: cs96and/FoundryVTT-release-package@v1
       with:
         package-token: ${{ secrets.FOUNDRY_API_TOKEN }}
