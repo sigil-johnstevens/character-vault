@@ -126,14 +126,6 @@ async function fetchPassword() {
 
 // Make a random folder color
 async function fetchRandomColor() {
-    const response = await fetch('http://colormind.io/api/', {
-        method: 'POST',
-        body: JSON.stringify({ model: 'default' })
-    });
-    if (response.ok) {
-        const data = await response.json();
-        return `#${data.result[0].map(c => c.toString(16).padStart(2, '0')).join('')}`;
-    }
     return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0').toUpperCase();
 }
 
