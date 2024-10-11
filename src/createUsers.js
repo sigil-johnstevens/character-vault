@@ -58,7 +58,7 @@ async function processUserGeneration(sessionName, userInput) {
         <p>Use the button below to copy the passwords to the chat input for cut and paste:</p>
         <pre>${consoleOutput}</pre>
         <div>
-            <button class="dumpToChatInputButton">Dump to Chat Input</button>
+            <button class="dumpToChatInputButton">Copy Text to Chat Input</button>
         </div>
     `;
     // Post the message to chat
