@@ -1,5 +1,9 @@
 # Character Vault
 
+## 1.1.3
+
+- Remove Session Report function, too specific.
+
 ## 1.1.2
 
 - Fixed GitHub import to use `importfromJson` instead of `update`

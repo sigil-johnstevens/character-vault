@@ -23,7 +23,6 @@ Additional bulk actions and utility functions are available to Game Master's via
 - **Upload Folder to GitHub**: Upload all actors in a selected folder to a GitHub repository to save any advancements or updates from the session (note that this overwrites previous versions of the same actor in the repo). Choose the folder containing the actors and upload them to GitHub with confirmation notifications.
 - **Import from GitHub**: Use the Import from GitHub button to match and import a folder of actors from GitHub to your game.
 - **Remove All Non-GM Users**: This option removes all non-GM users from your game. It is useful for resetting the game before a new session.
-- **File Session Report**: Choose a folder of actors and complete the form to post a session report to Discord via a webhook.
 
 ## Game Settings
 
@@ -41,14 +40,6 @@ To function correctly, these settings must be configured for the module's GitHub
 
 Currently, there is only one setting for user creation.
 
-**Password Strength**: The module uses the [DinoPass API] (https://www.dinopass.com/api) to generate user passwords. Simple passwords only have lowercase letters and numbers. Strong passwords have mixed upper- and lower-case letters, a special character (like @, $, !, and so on), and some numbers.
-
-### Discord Settings
-
-The module can produce Session Reports and automatically post them to a Discord channel or thread using a webhook. The report automatically fills in Session Date, Session Time, Game Master, and Actors (from the selected folder). Users can customize the avatar and name of the Discord bot making the post.
-
-- **Discord WebHook URL**: Enter the [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) of a Discord channel or thread where the session report will be posted. If you do not have integrations access, you may need to get this from a server admin.
-- **Discord Image**: A public URL to the avatar image you want for your Discord bot posts.
-- **Discord Bot Name**: Name of Discord bot when posting session reports.
+**Password Strength**: The module uses the [DinoPass API] (<https://www.dinopass.com/api>) to generate user passwords. Simple passwords only have lowercase letters and numbers. Strong passwords have mixed upper- and lower-case letters, a special character (like @, $, !, and so on), and some numbers.
 
 ---
