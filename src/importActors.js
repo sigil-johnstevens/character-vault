@@ -205,7 +205,7 @@ export async function promptForActorFolder() {
     });
 }
 
-// Function to import the actor from GitHub to Foundry
+// Function to import the actor from GitHub to Foundry using the built-in importFromJSON function
 export async function importActorFromGitHubToActor(fileName, actorId) {
     const repo = game.settings.get(MODULE_ID, "githubRepo");
     const path = game.settings.get(MODULE_ID, "githubPath");
@@ -222,8 +222,8 @@ export async function importActorFromGitHubToActor(fileName, actorId) {
     if (response.ok) {
         const file = await response.json();
         const jsonContent = decodeURIComponent(escape(atob(file.content)));
-        const actorData = JSON.parse(jsonContent);
 
+        // Find the existing actor
         const actor = game.actors.get(actorId);
 
         if (!actor) {
@@ -232,12 +232,16 @@ export async function importActorFromGitHubToActor(fileName, actorId) {
             return;
         }
 
-        const folderId = actor.folder?.id || null;
-
-        await actor.update({ ...actorData, folder: folderId });
-        ui.notifications.info(`Actor ${actorData.name} has been updated with data from ${fileName}.`);
+        try {
+            // Use the importFromJSON function to import the data
+            await actor.importFromJSON(jsonContent);
+            ui.notifications.info(`Actor ${actor.name} has been successfully imported and updated.`);
+        } catch (error) {
+            console.error('Failed to import actor:', error);
+            ui.notifications.error('Failed to import actor from JSON.');
+        }
     } else {
-        console.error('Error importing actor from GitHub:', response.statusText);
-        ui.notifications.error('Failed to import actor from GitHub.');
+        console.error('Error fetching actor JSON from GitHub:', response.statusText);
+        ui.notifications.error('Failed to fetch actor from GitHub.');
     }
 }

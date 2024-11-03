@@ -1,5 +1,9 @@
 # Character Vault
 
+## 1.1.2
+
+- Fixed GitHub import to use `importfromJson` instead of `update`
+
 ## 1.1.1
 
 - Change export permissions to Game Master only
