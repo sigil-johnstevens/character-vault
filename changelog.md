@@ -1,5 +1,9 @@
 # Character Vault
 
+## 1.1.4
+
+- Adjust import/export functions to Slugify json file names
+
 ## 1.1.3
 
 - Remove Session Report function, too specific.

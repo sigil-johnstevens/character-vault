@@ -12,7 +12,7 @@ export async function openFolderUploadDialog() {
         return acc;
     }, {});
 
-    const input = new foundry.data.fields.StringField({ 
+    const input = new foundry.data.fields.StringField({
         required: true,
         choices: choices,
         label: "Folder",
@@ -24,7 +24,7 @@ export async function openFolderUploadDialog() {
     await foundry.applications.api.DialogV2.prompt({
         content: content,
         modal: true,
-        ok: { 
+        ok: {
             label: "Upload",
             callback: async (event, button, html) => {
                 const id = button.form.elements.folderId.value;
@@ -78,18 +78,21 @@ export async function uploadActorToGitHub(actor) {
 }
 
 // Step 5: Function to Upload to GitHub
+
 export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
-    const sanitizedFileName = foundry.utils.slugify(actor.name); // Use Foundry's native slugify
+    const sanitizedFileName = actor.name.slugify(); // Use Foundry's slugify instance method
     const encodedName = encodeURIComponent(`${sanitizedFileName}.json`);
     const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodedName}`;
 
     let sha = null;
 
-    // Check if the file already exists on GitHub
+    // Step 1: Check if the file already exists on GitHub to get its SHA
     try {
         const checkResponse = await fetch(url, {
             method: 'GET',
-            headers: { 'Authorization': `token ${yourPAT}` },
+            headers: {
+                'Authorization': `token ${yourPAT}`,
+            }
         });
 
         if (checkResponse.ok) {
@@ -99,9 +102,10 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
     } catch (error) {
         ui.notifications.error("Failed to check GitHub file: " + error.message);
         console.error('Check file error:', error);
+        return false;
     }
 
-    // Upload the actor data to GitHub
+    // Step 2: Upload the actor data to GitHub
     try {
         const response = await fetch(url, {
             method: 'PUT',
@@ -111,9 +115,9 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
             },
             body: JSON.stringify({
                 message: `Updating character ${actor.name}`,
-                content: toBase64(jsonContent), // Use the toBase64 function here
-                sha: sha, // Include sha if the file exists (update)
-                branch: "main", // Or another branch if needed
+                content: toBase64(jsonContent), // Convert JSON content to base64
+                sha: sha,  // Include sha if the file exists (update)
+                branch: "main",
             }),
         });
 
@@ -133,7 +137,7 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
     }
 }
 
-// Helper Function to convert string to Base64
-export async function toBase64(str) {
+// Function to convert string to Base64
+export function toBase64(str) {
     return btoa(unescape(encodeURIComponent(str)));
 }

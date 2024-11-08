@@ -2,6 +2,8 @@ const MODULE_ID = "character-vault";
 
 
 // Get list of actors  from GitHub
+// Get list of actors from GitHub, showing actual names from JSON content
+// Get list of actors from GitHub, showing actual names from JSON content
 export async function fetchGitHubActorList() {
     const repo = game.settings.get(MODULE_ID, "githubRepo");
     const path = game.settings.get(MODULE_ID, "githubPath");
@@ -17,10 +19,30 @@ export async function fetchGitHubActorList() {
 
     if (response.ok) {
         const files = await response.json();
-        return files.filter(file => file.name.endsWith('.json')).map(file => ({
-            name: file.name.replace('.json', ''), // Extract the actor's name
-            fileName: file.name
-        }));
+
+        // Filter and map JSON files to their actual names from content
+        const actorList = [];
+        for (const file of files.filter(file => file.name.endsWith('.json'))) {
+            const fileResponse = await fetch(`https://api.github.com/repos/${repo}/contents/${path}/${file.name}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `token ${yourPAT}`
+                }
+            });
+
+            if (fileResponse.ok) {
+                const fileData = await fileResponse.json();
+                const fileContent = decodeURIComponent(escape(atob(fileData.content))); // Decode base64 content
+                const actorData = JSON.parse(fileContent);
+                actorList.push({
+                    name: actorData.name || file.name.replace('.json', ''), // Default to filename if no name in JSON
+                    fileName: file.name
+                });
+            } else {
+                console.error(`Failed to fetch JSON content for ${file.name}`);
+            }
+        }
+        return actorList;
     } else {
         console.error('Error fetching actor list from GitHub:', response.statusText);
         return [];
