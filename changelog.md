@@ -1,5 +1,9 @@
 # Character Vault
 
+## 1.1.5
+
+- Add additional safety to slugify
+
 ## 1.1.4
 
 - Adjust import/export functions to Slugify json file names
