@@ -80,7 +80,7 @@ export async function uploadActorToGitHub(actor) {
 // Step 5: Function to Upload to GitHub
 
 export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
-    const sanitizedFileName = actor.name.slugify(); // Use Foundry's slugify instance method
+    const sanitizedFileName = actor.name.slugify().replace(/'/g, ''); // Foundry's slugify instance method and removes apostrophes 
     const encodedName = encodeURIComponent(`${sanitizedFileName}.json`);
     const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodedName}`;
 
