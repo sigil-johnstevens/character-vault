@@ -1,5 +1,11 @@
 # Character Vault
 
+## 2.0.0
+
+- Update to Foundry VTT version 13 compatibility
+- Update generate users to create chat card for each user, private to GM with name, password, and invite link
+- Change Copy to Chat to Copy to Clipboard
+
 ## 1.1.5
 
 - Add additional safety to slugify

@@ -3,8 +3,8 @@
   "title": "Character Vault",
   "version": "1.0.0",
   "compatibility": {
-    "minimum": "12",
-    "verified": "12.330"
+    "minimum": "13",
+    "verified": "13.342"
   },
   "description": "Store actor JSON files in a GitHub repo and import the data into your world and export back to the repo. Useful for managing West Marches or society type play where players can bring their actors through a persistent world with multiple Game Masters and Foundry VTT servers.",
   "authors": [

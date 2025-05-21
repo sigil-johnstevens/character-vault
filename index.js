@@ -65,94 +65,71 @@ Hooks.once("ready", () => {
     console.log("Character Vault: Functions are now globally available.");
 });
 
-// Add Actor Directory Buttons for GM only
-Hooks.on('renderActorDirectory', (app, html, data) => {
-    if (!game.user.isGM) return; // Ensure buttons are only visible to GMs
+Hooks.on("renderActorDirectory", (app, html, data) => {
+  if (!game.user.isGM) return;
 
-    // Create the header
-    const header = $('<h3 class="character-vault-header">Character Vault Controls</h3>');
+  const footer = html.querySelector(".directory-footer");
+  if (!footer) return;
 
-    // Add a button for generating users
-    const generateUsersButton = $('<button class="generate-users-button">Generate Users</button>');
-    generateUsersButton.on('click', () => {
-        generateUsers();
-    });
+  // Button: Generate Users
+  const generateUsersBtn = document.createElement("button");
+  generateUsersBtn.classList.add("create-entity");
+  generateUsersBtn.innerHTML = `<i class="fa-solid fa-user-plus"></i> Generate Users`;
+  generateUsersBtn.addEventListener("click", () => {
+    generateUsers();
+  });
 
-    // Add a button for importing from GitHub
-    const importFromGitHubButton = $('<button class="import-github-button">Import from GitHub</button>');
-    importFromGitHubButton.on('click', () => {
-        openFolderImportDialog();
-    });
+  // Button: Import from GitHub
+  const importGitHubBtn = document.createElement("button");
+  importGitHubBtn.classList.add("create-entity");
+  importGitHubBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i> Import from GitHub`;
+  importGitHubBtn.addEventListener("click", () => {
+    openFolderImportDialog();
+  });
 
-    // Add a button for deleting all non-GM users
-    const deleteNonGMUsersButton = $('<button class="delete-non-gm-users-button">Delete Non-GM Users</button>');
-    deleteNonGMUsersButton.on('click', async () => {
-        if (!game.user.isGM) {
-            ui.notifications.warn("You must be a GM to run this action.");
-            return;
-        }
-
-        const nonGMs = game.users.filter(user => !user.isGM);
-        for (let user of nonGMs) {
-            console.log(`Removing user: ${user.name}`);
-            await user.delete();
-        }
-
-        ui.notifications.info("All non-GM users have been removed.");
-    });
-
-    // Add a button for uploading actors from a folder to GitHub
-    const uploadFolderButton = $('<button class="upload-folder-button">Upload Folder to GitHub</button>');
-    uploadFolderButton.on('click', () => {
-        openFolderUploadDialog();
-    });
-
-    // Add a button for uploading actors from a folder to GitHub
-    const showSessionReportButton = $('<button class="session-report-button">File a Session Report</button>');
-    showSessionReportButton.on('click', () => {
-        showSessionReportForm();
-    });
-
-    // Create a container for the buttons and append it to the footer
-    const buttonContainer = $('<div class="custom-buttons"></div>');
-    buttonContainer.append(header);
-    buttonContainer.append(generateUsersButton);
-    buttonContainer.append(importFromGitHubButton);
-    buttonContainer.append(deleteNonGMUsersButton);
-    buttonContainer.append(uploadFolderButton);
-    html.find('.directory-footer').append(buttonContainer);
-});
-
-// Add Import and Export Context Menu Options
-Hooks.on('getActorDirectoryEntryContext', (html, options) => {
-    options.push({
-        name: "Import from GitHub",
-        icon: '<i class="fas fa-download"></i>',
-        callback: async li => {
-            const actorId = li.attr('data-document-id');  // Get the actor ID from the context
-            const actor = game.actors.get(actorId);
-            if (actor && actor.isOwner) {
-                openImportDialog(actorId);
-            } else {
-                ui.notifications.warn("You do not own this actor.");
-            }
-        }
-    });
-
-    if (game.user.isGM) {
-        options.push({
-            name: "Export to GitHub",
-            icon: '<i class="fas fa-upload"></i>',
-            callback: async li => {
-                const actorId = li.attr('data-document-id');  // Get the actor ID from the context
-                const actor = game.actors.get(actorId);
-                if (actor && actor.isOwner) {
-                    await uploadActorToGitHub(actor);
-                } else {
-                    ui.notifications.warn("You do not own this actor.");
-                }
-            }
-        });
+  // Button: Delete Non-GM Users
+  const deleteNonGMBtn = document.createElement("button");
+  deleteNonGMBtn.classList.add("create-entity");
+  deleteNonGMBtn.innerHTML = `<i class="fa-solid fa-user-slash"></i> Delete Non-GM Users`;
+  deleteNonGMBtn.addEventListener("click", async () => {
+    const nonGMs = game.users.filter(user => !user.isGM);
+    for (let user of nonGMs) {
+      console.log(`Removing user: ${user.name}`);
+      await user.delete();
     }
+    ui.notifications.info("All non-GM users have been removed.");
+  });
 
+  // Button: Upload Folder to GitHub
+  const uploadFolderBtn = document.createElement("button");
+  uploadFolderBtn.classList.add("create-entity");
+  uploadFolderBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Upload Folder to GitHub`;
+  uploadFolderBtn.addEventListener("click", () => {
+    openFolderUploadDialog();
+  });
+  // Append all buttons
+  footer.appendChild(generateUsersBtn);
+  footer.appendChild(importGitHubBtn);
+  footer.appendChild(deleteNonGMBtn);
+  footer.appendChild(uploadFolderBtn);
 });
+
+// Conext Menu Function
+Hooks.on("getActorContextOptions", (html, options) => {
+  const getActor = (/** @type {HTMLElement} */ li) => game.actors.get(li.dataset.entryId);
+
+  options.push({
+    name: "Import from GitHub",
+    icon: '<i class="fa-solid fa-cloud-arrow-down"></i>',
+    condition: (li) => getActor(li)?.isOwner,
+    callback: (li) => openImportDialog(getActor(li).id)
+  });
+
+  options.push({
+    name: "Export to GitHub",
+    icon: '<i class="fa-solid fa-cloud-arrow-up"></i>',
+    condition: (li) => game.user.isGM && getActor(li)?.isOwner,
+    callback: (li) => uploadActorToGitHub(getActor(li))
+  });
+});
+
