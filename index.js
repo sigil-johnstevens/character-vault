@@ -68,28 +68,27 @@ Hooks.once("ready", () => {
 Hooks.on("renderActorDirectory", (app, html, data) => {
   if (!game.user.isGM) return;
 
-  const footer = html.querySelector(".directory-footer");
+  const footer = html[0].querySelector(".directory-footer");
   if (!footer) return;
+
+  // Check if Vault buttons have already been added
+  if (footer.querySelector(".cv-generate-users")) return;
 
   // Button: Generate Users
   const generateUsersBtn = document.createElement("button");
-  generateUsersBtn.classList.add("create-entity");
+  generateUsersBtn.classList.add("create-entity", "cv-generate-users");
   generateUsersBtn.innerHTML = `<i class="fa-solid fa-user-plus"></i> Generate Users`;
-  generateUsersBtn.addEventListener("click", () => {
-    generateUsers();
-  });
+  generateUsersBtn.addEventListener("click", () => generateUsers());
 
   // Button: Import from GitHub
   const importGitHubBtn = document.createElement("button");
-  importGitHubBtn.classList.add("create-entity");
+  importGitHubBtn.classList.add("create-entity", "cv-import-github");
   importGitHubBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i> Import from GitHub`;
-  importGitHubBtn.addEventListener("click", () => {
-    openFolderImportDialog();
-  });
+  importGitHubBtn.addEventListener("click", () => openFolderImportDialog());
 
   // Button: Delete Non-GM Users
   const deleteNonGMBtn = document.createElement("button");
-  deleteNonGMBtn.classList.add("create-entity");
+  deleteNonGMBtn.classList.add("create-entity", "cv-delete-users");
   deleteNonGMBtn.innerHTML = `<i class="fa-solid fa-user-slash"></i> Delete Non-GM Users`;
   deleteNonGMBtn.addEventListener("click", async () => {
     const nonGMs = game.users.filter(user => !user.isGM);
@@ -102,11 +101,10 @@ Hooks.on("renderActorDirectory", (app, html, data) => {
 
   // Button: Upload Folder to GitHub
   const uploadFolderBtn = document.createElement("button");
-  uploadFolderBtn.classList.add("create-entity");
+  uploadFolderBtn.classList.add("create-entity", "cv-upload-folder");
   uploadFolderBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Upload Folder to GitHub`;
-  uploadFolderBtn.addEventListener("click", () => {
-    openFolderUploadDialog();
-  });
+  uploadFolderBtn.addEventListener("click", () => openFolderUploadDialog());
+
   // Append all buttons
   footer.appendChild(generateUsersBtn);
   footer.appendChild(importGitHubBtn);
@@ -132,4 +130,3 @@ Hooks.on("getActorContextOptions", (html, options) => {
     callback: (li) => uploadActorToGitHub(getActor(li))
   });
 });
-
