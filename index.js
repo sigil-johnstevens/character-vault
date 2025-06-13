@@ -48,8 +48,19 @@ Hooks.once('init', () => {
 });
 
 import { generateUsers } from './src/createUsers.js';
-import { fetchGitHubActorList, openImportDialog, openFolderImportDialog, importActorFromGitHubToActor } from './src/importActors.js';
-import { openFolderUploadDialog, uploadActorsFromFolderToGitHub, uploadToGitHub, uploadActorToGitHub, toBase64 } from './src/uploadActors.js';
+import {
+    fetchGitHubActorList,
+    openImportDialog,
+    openFolderImportDialog,
+    importActorFromGitHubToActor
+} from './src/importActors.js';
+import {
+    openFolderUploadDialog,
+    uploadActorsFromFolderToGitHub,
+    uploadToGitHub,
+    uploadActorToGitHub,
+    toBase64
+} from './src/uploadActors.js';
 
 Hooks.once("ready", () => {
     window.generateUsers = generateUsers;
@@ -66,67 +77,70 @@ Hooks.once("ready", () => {
 });
 
 Hooks.on("renderActorDirectory", (app, html, data) => {
-  if (!game.user.isGM) return;
+    if (!game.user.isGM) return;
 
-  const footer = html[0].querySelector(".directory-footer");
-  if (!footer) return;
+    const root = html instanceof HTMLElement ? html : html[0];
+    if (!root) return;
 
-  // Check if Vault buttons have already been added
-  if (footer.querySelector(".cv-generate-users")) return;
+    const footer = root.querySelector(".directory-footer");
+    if (!footer) return;
 
-  // Button: Generate Users
-  const generateUsersBtn = document.createElement("button");
-  generateUsersBtn.classList.add("create-entity", "cv-generate-users");
-  generateUsersBtn.innerHTML = `<i class="fa-solid fa-user-plus"></i> Generate Users`;
-  generateUsersBtn.addEventListener("click", () => generateUsers());
+    // Avoid duplicate injection
+    if (footer.querySelector(".character-vault-controls")) return;
 
-  // Button: Import from GitHub
-  const importGitHubBtn = document.createElement("button");
-  importGitHubBtn.classList.add("create-entity", "cv-import-github");
-  importGitHubBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i> Import from GitHub`;
-  importGitHubBtn.addEventListener("click", () => openFolderImportDialog());
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("action-buttons", "flexcol", "character-vault-controls");
 
-  // Button: Delete Non-GM Users
-  const deleteNonGMBtn = document.createElement("button");
-  deleteNonGMBtn.classList.add("create-entity", "cv-delete-users");
-  deleteNonGMBtn.innerHTML = `<i class="fa-solid fa-user-slash"></i> Delete Non-GM Users`;
-  deleteNonGMBtn.addEventListener("click", async () => {
-    const nonGMs = game.users.filter(user => !user.isGM);
-    for (let user of nonGMs) {
-      console.log(`Removing user: ${user.name}`);
-      await user.delete();
-    }
-    ui.notifications.info("All non-GM users have been removed.");
-  });
 
-  // Button: Upload Folder to GitHub
-  const uploadFolderBtn = document.createElement("button");
-  uploadFolderBtn.classList.add("create-entity", "cv-upload-folder");
-  uploadFolderBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Upload Folder to GitHub`;
-  uploadFolderBtn.addEventListener("click", () => openFolderUploadDialog());
+    // Helper to create Foundry-style buttons
+    const createButton = (iconClass, label, onClick) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.innerHTML = `<i class="${iconClass}"></i><span>${label}</span>`;
+        btn.addEventListener("click", onClick);
+        return btn;
+    };
 
-  // Append all buttons
-  footer.appendChild(generateUsersBtn);
-  footer.appendChild(importGitHubBtn);
-  footer.appendChild(deleteNonGMBtn);
-  footer.appendChild(uploadFolderBtn);
+    // Button: Generate Users
+    const generateUsersBtn = createButton("fa-solid fa-user-plus", "Generate Users", () => generateUsers());
+
+    // Button: Import from GitHub
+    const importGitHubBtn = createButton("fa-solid fa-cloud-arrow-down", "Import from GitHub", () => openFolderImportDialog());
+
+    // Button: Delete Non-GM Users
+    const deleteNonGMBtn = createButton("fa-solid fa-user-slash", "Delete Non-GM Users", async () => {
+        const nonGMs = game.users.filter(user => !user.isGM);
+        for (let user of nonGMs) await user.delete();
+        ui.notifications.info("All non-GM users have been removed.");
+    });
+
+    // Button: Upload Folder to GitHub
+    const uploadFolderBtn = createButton("fa-solid fa-cloud-arrow-up", "Upload Folder to GitHub", () => openFolderUploadDialog());
+
+    // Append buttons to wrapper and to footer
+    wrapper.appendChild(generateUsersBtn);
+    wrapper.appendChild(importGitHubBtn);
+    wrapper.appendChild(deleteNonGMBtn);
+    wrapper.appendChild(uploadFolderBtn);
+    footer.appendChild(wrapper);
 });
 
-// Conext Menu Function
+
+// Context Menu Function
 Hooks.on("getActorContextOptions", (html, options) => {
-  const getActor = (/** @type {HTMLElement} */ li) => game.actors.get(li.dataset.entryId);
+    const getActor = (/** @type {HTMLElement} */ li) => game.actors.get(li.dataset.entryId);
 
-  options.push({
-    name: "Import from GitHub",
-    icon: '<i class="fa-solid fa-cloud-arrow-down"></i>',
-    condition: (li) => getActor(li)?.isOwner,
-    callback: (li) => openImportDialog(getActor(li).id)
-  });
+    options.push({
+        name: "Import from GitHub",
+        icon: '<i class="fa-solid fa-cloud-arrow-down"></i>',
+        condition: (li) => getActor(li)?.isOwner,
+        callback: (li) => openImportDialog(getActor(li).id)
+    });
 
-  options.push({
-    name: "Export to GitHub",
-    icon: '<i class="fa-solid fa-cloud-arrow-up"></i>',
-    condition: (li) => game.user.isGM && getActor(li)?.isOwner,
-    callback: (li) => uploadActorToGitHub(getActor(li))
-  });
+    options.push({
+        name: "Export to GitHub",
+        icon: '<i class="fa-solid fa-cloud-arrow-up"></i>',
+        condition: (li) => game.user.isGM && getActor(li)?.isOwner,
+        callback: (li) => uploadActorToGitHub(getActor(li))
+    });
 });
