@@ -1,5 +1,9 @@
 # Character Vault
 
+## 2.0.1
+
+- Add check to `renderActorDirectory` to prevent double button creation
+
 ## 2.0.0
 
 - Update to Foundry VTT version 13 compatibility
