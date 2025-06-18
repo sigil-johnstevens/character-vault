@@ -1,5 +1,9 @@
 # Character Vault
 
+## 2.0.2
+
+- Add better CORS handling for dinopass api
+
 ## 2.0.1
 
 - Add check to `renderActorDirectory` to prevent double button creation
