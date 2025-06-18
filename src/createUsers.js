@@ -121,11 +121,17 @@ async function createUser(username, folder) {
 
 // Get password from DinoPass
 async function fetchPassword() {
-  const passwordType = game.settings.get(MODULE_ID, "passwordStrength");
-  const response = await fetch(`https://www.dinopass.com/password/${passwordType}`);
-  if (response.ok) return await response.text();
-  console.error("DinoPass failed, using fallback.");
-  return "fallbackPassword123";
+  const passwordType = game.settings.get(MODULE_ID, "passwordStrength") || "simple";
+  const url = `https://www.dinopass.com/password/${passwordType}`;
+  try {
+    // This is Foundry's built-in fetch that works in Node.js (server-side), no CORS issue
+    const response = await foundry.utils.fetchWithTimeout(url, { method: "GET" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return (await response.text()).trim();
+  } catch (err) {
+    console.error("DinoPass fetch failed, using fallback password:", err);
+    return "fallbackPassword123";
+  }
 }
 
 // Get a random folder color
