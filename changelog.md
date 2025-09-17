@@ -1,5 +1,10 @@
 # Character Vault
 
+## 2.1.0
+
+- Fix copy to clipboard error when copying player login info
+- Speed up load times for populating actor lists from GitHub repo
+
 ## 2.0.2
 
 - Add better CORS handling for dinopass api

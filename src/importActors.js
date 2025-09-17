@@ -20,28 +20,30 @@ export async function fetchGitHubActorList() {
     if (response.ok) {
         const files = await response.json();
 
-        // Filter and map JSON files to their actual names from content
-        const actorList = [];
-        for (const file of files.filter(file => file.name.endsWith('.json'))) {
+        // Filter JSON files
+        const jsonFiles = files.filter(file => file.name.endsWith('.json'));
+        // Fetch all file contents in parallel
+        const actorPromises = jsonFiles.map(async (file) => {
             const fileResponse = await fetch(`https://api.github.com/repos/${repo}/contents/${path}/${file.name}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `token ${yourPAT}`
                 }
             });
-
             if (fileResponse.ok) {
                 const fileData = await fileResponse.json();
                 const fileContent = decodeURIComponent(escape(atob(fileData.content))); // Decode base64 content
                 const actorData = JSON.parse(fileContent);
-                actorList.push({
+                return {
                     name: actorData.name || file.name.replace('.json', ''), // Default to filename if no name in JSON
                     fileName: file.name
-                });
+                };
             } else {
                 console.error(`Failed to fetch JSON content for ${file.name}`);
+                return null;
             }
-        }
+        });
+        const actorList = (await Promise.all(actorPromises)).filter(Boolean);
         return actorList;
     } else {
         console.error('Error fetching actor list from GitHub:', response.statusText);
@@ -55,7 +57,7 @@ export async function openImportDialog() {
     const path = game.settings.get(MODULE_ID, "githubPath");
     const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
 
-    const githubActors = await fetchGitHubActorList(repo, path, yourPAT);
+    const githubActors = await fetchGitHubActorList();
     const githubChoices = githubActors.reduce((acc, actor) => {
         acc[actor.fileName] = actor.name;
         return acc;

@@ -87,12 +87,28 @@ Hooks.on("renderChatMessageHTML", (message, htmlElement) => {
     const url = button.dataset.url;
     const text = `User: ${username}\nPassword: ${password}\nInvite Link: ${url}`;
 
-    navigator.clipboard.writeText(text)
-      .then(() => ui.notifications.info(`📋 Copied info for ${username}`))
-      .catch(err => {
-        console.error("Clipboard write failed", err);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => ui.notifications.info(`Copied info for ${username}`))
+        .catch(err => {
+          console.error("Clipboard write failed", err);
+          ui.notifications.warn("Clipboard copy failed.");
+        });
+    } else {
+      // Fallback for environments without clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        ui.notifications.info(`📋 Copied info for ${username}`);
+      } catch (err) {
+        console.error("Fallback copy failed", err);
         ui.notifications.warn("Clipboard copy failed.");
-      });
+      }
+      document.body.removeChild(textArea);
+    }
   });
 });
 
