@@ -1,9 +1,7 @@
+
+import { getActorFolders, toBase64 } from "./utils.js";
 const MODULE_ID = "character-vault";
 
-// Step 1: Get Folders in the Actor Directory
-export function getActorFolders() {
-    return game.folders.filter(f => f.type === "Actor");
-}
 
 // Step 2: Create a Dialog for Folder Selection
 export async function openFolderUploadDialog() {
@@ -100,7 +98,6 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
             sha = data.sha; // Get the current sha value for updating
         }
     } catch (error) {
-        ui.notifications.error("Failed to check GitHub file: " + error.message);
         console.error('Check file error:', error);
         return false;
     }
@@ -122,22 +119,15 @@ export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
         });
 
         if (response.ok) {
-            ui.notifications.info(`Actor ${actor.name} has been successfully uploaded to GitHub.`);
             console.log(`${actor.name} has been exported to GitHub.`);
             return true;
         } else {
-            ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
             console.error('Upload error:', await response.text());
             return false;
         }
     } catch (error) {
-        ui.notifications.error("Error exporting to GitHub: " + error.message);
         console.error('Export error:', error);
         return false;
     }
 }
 
-// Function to convert string to Base64
-export function toBase64(str) {
-    return btoa(unescape(encodeURIComponent(str)));
-}

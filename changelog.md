@@ -1,5 +1,10 @@
 # Character Vault
 
+
+## 2.1.1
+
+- Code deduplication and centralization of utility functions
+
 ## 2.1.0
 
 - Fix copy to clipboard error when copying player login info

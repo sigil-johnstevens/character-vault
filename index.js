@@ -59,20 +59,21 @@ import {
     uploadActorsFromFolderToGitHub,
     uploadToGitHub,
     uploadActorToGitHub,
-    toBase64
 } from './src/uploadActors.js';
 
 Hooks.once("ready", () => {
-    window.generateUsers = generateUsers;
-    window.fetchGitHubActorList = fetchGitHubActorList;
-    window.openImportDialog = openImportDialog;
-    window.importActorFromGitHubToActor = importActorFromGitHubToActor;
-    window.openFolderUploadDialog = openFolderUploadDialog;
-    window.openFolderImportDialog = openFolderImportDialog;
-    window.uploadActorsFromFolderToGitHub = uploadActorsFromFolderToGitHub;
-    window.uploadToGitHub = uploadToGitHub;
-    window.toBase64 = toBase64;
-    window.uploadActorToGitHub = uploadActorToGitHub;
+    const exports = {
+        generateUsers,
+        fetchGitHubActorList,
+        openImportDialog,
+        importActorFromGitHubToActor,
+        openFolderUploadDialog,
+        openFolderImportDialog,
+        uploadActorsFromFolderToGitHub,
+        uploadToGitHub,
+        uploadActorToGitHub
+    };
+    Object.entries(exports).forEach(([key, fn]) => window[key] = fn);
     console.log("Character Vault: Functions are now globally available.");
 });
 

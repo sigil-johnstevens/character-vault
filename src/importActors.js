@@ -1,13 +1,11 @@
+
+import { getGitHubSettings, getActorFolders } from "./utils.js";
 const MODULE_ID = "character-vault";
 
 
-// Get list of actors  from GitHub
-// Get list of actors from GitHub, showing actual names from JSON content
 // Get list of actors from GitHub, showing actual names from JSON content
 export async function fetchGitHubActorList() {
-    const repo = game.settings.get(MODULE_ID, "githubRepo");
-    const path = game.settings.get(MODULE_ID, "githubPath");
-    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
+    const { repo, path, yourPAT } = getGitHubSettings();
 
     const url = `https://api.github.com/repos/${repo}/contents/${path}`;
     const response = await fetch(url, {
@@ -53,9 +51,6 @@ export async function fetchGitHubActorList() {
 
 // Single Actor import function for use in right click context menu
 export async function openImportDialog() {
-    const repo = game.settings.get(MODULE_ID, "githubRepo");
-    const path = game.settings.get(MODULE_ID, "githubPath");
-    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
 
     const githubActors = await fetchGitHubActorList();
     const githubChoices = githubActors.reduce((acc, actor) => {
@@ -172,59 +167,54 @@ export async function openFolderImportDialog() {
     });
 }
 
-// this is a duplicate function from upLoadActors. Maybe can import or roll it into the promptFor function
-export async function getActorFolders() {
-    return game.folders.filter(f => f.type === "Actor");
-}
 
 // Choose which Actor folder to use for multiple import 
 export async function promptForActorFolder() {
-    // Reduce Actors Folder into a choices object. I do this different ways in differnt places for some reason.
+    // Reduce Actors Folder into a choices object.
     return new Promise(resolve => {
-        getActorFolders().then(folders => {
-            const folderChoices = folders.reduce((acc, folder) => {
-                acc[folder.id] = folder.name;
-                return acc;
-            }, {});
+        const folders = getActorFolders();
+        const folderChoices = folders.reduce((acc, folder) => {
+            acc[folder.id] = folder.name;
+            return acc;
+        }, {});
 
-            const content = `
-                <form>
-                    <div class="form-group">
-                        <label>Select a folder:</label>
-                        <select name="folderId" id="folderSelect">
-                            ${Object.entries(folderChoices).map(([id, name]) =>
-                `<option value="${id}">${name}</option>`
-            ).join('')}
-                        </select>
-                    </div>
-                </form>
-            `;
+        const content = `
+            <form>
+                <div class="form-group">
+                    <label>Select a folder:</label>
+                    <select name="folderId" id="folderSelect">
+                        ${Object.entries(folderChoices).map(([id, name]) =>
+            `<option value="${id}">${name}</option>`
+        ).join('')}
+                    </select>
+                </div>
+            </form>
+        `;
 
-            foundry.applications.api.DialogV2.prompt({
-                title: "Select Actor Folder",
-                content: content,
-                modal: true,
-                ok: {
-                    label: "Select",
-                    callback: async (event, button, html) => {
-                        const folderId = button.form.elements.folderId.value;
-                        const folder = game.folders.get(folderId);
-                        resolve(folder);
-                    }
-                },
-                cancel: {
-                    label: "Cancel",
-                    callback: () => resolve(null)
-                },
-                window: {
-                    title: "Folder Selection",
-                    icon: "fa-solid fa-folder-open"
-                },
-                position: {
-                    width: 400,
-                    height: "auto"
+        foundry.applications.api.DialogV2.prompt({
+            title: "Select Actor Folder",
+            content: content,
+            modal: true,
+            ok: {
+                label: "Select",
+                callback: async (event, button, html) => {
+                    const folderId = button.form.elements.folderId.value;
+                    const folder = game.folders.get(folderId);
+                    resolve(folder);
                 }
-            });
+            },
+            cancel: {
+                label: "Cancel",
+                callback: () => resolve(null)
+            },
+            window: {
+                title: "Folder Selection",
+                icon: "fa-solid fa-folder-open"
+            },
+            position: {
+                width: 400,
+                height: "auto"
+            }
         });
     });
 }
