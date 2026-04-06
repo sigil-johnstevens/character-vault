@@ -67,7 +67,6 @@ async function processUserGeneration(sessionName, userInput) {
 
   for (let username of userNames) {
     const [user, password] = await createUser(username, folder);
-    await pushMacros(user);
 
     const inviteURL = game.data.addresses.remote;
 
@@ -242,19 +241,6 @@ function capitalize(value) {
 // Get a random folder color
 async function fetchRandomColor() {
   return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0').toUpperCase();
-}
-
-// Push GM's macro bar 5 to the new user
-async function pushMacros(user) {
-  const gmMacros = game.user.getHotbarMacros(5);
-  for (let i = 0; i < gmMacros.length; i++) {
-    if (gmMacros[i].macro) {
-      const empty = user.getHotbarMacros(1).find(s => s.macro == null);
-      if (empty) {
-        await user.assignHotbarMacro(gmMacros[i].macro, empty.slot);
-      }
-    }
-  }
 }
 
 // Global access

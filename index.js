@@ -1,4 +1,5 @@
 const MODULE_ID = "character-vault";
+import { copyGmHotbar } from './src/utils.js';
 
 // Register Access Token, Path, and Repo as Game Settings
 Hooks.once('init', () => {
@@ -116,6 +117,29 @@ Hooks.on("renderActorDirectory", (app, html, data) => {
     wrapper.appendChild(importGitHubBtn);
     wrapper.appendChild(deleteNonGMBtn);
     wrapper.appendChild(uploadFolderBtn);
+    footer.appendChild(wrapper);
+});
+
+Hooks.on("renderMacroDirectory", (app, html, data) => {
+    if (!game.user.isGM) return;
+
+    const root = html instanceof HTMLElement ? html : html[0];
+    if (!root) return;
+
+    const footer = root.querySelector(".directory-footer");
+    if (!footer) return;
+
+    if (footer.querySelector(".character-vault-macro-controls")) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("action-buttons", "flexcol", "character-vault-macro-controls");
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.innerHTML = `<i class="fa-solid fa-keyboard"></i><span>Copy GM Hotbar</span>`;
+    button.addEventListener("click", () => copyGmHotbar());
+
+    wrapper.appendChild(button);
     footer.appendChild(wrapper);
 });
 

@@ -14,7 +14,7 @@ Players can only use the right-click context menu on an Owned Actor to access im
 Game Master Interface
 ---------------------
 
-Buttons in the Actor Directory give the Game Master additional utilities:
+Actor Directory buttons:
 
 *   **Generate Users**: Create multiple users and Actors:
     *   Variables
@@ -27,6 +27,9 @@ Buttons in the Actor Directory give the Game Master additional utilities:
 *   **Upload Folder to GitHub**: Upload all actors in a selected folder to a GitHub repository to save any updates from the session. Choose the folder containing the Actors and upload them to GitHub (this _overwrites previous versions_ in the repo )
 *   **Import from GitHub**: Use the Import from GitHub button to match and import a folder of actors from GitHub to your game.
 *   **Remove All Non-GM Users**: This option removes all non-GM users from your game. It is useful for resetting the game before a new session.
+
+Macro Directory Buttons:
+- **Copy GM Hotbar**: This button copies the chosen GM hotbar page (1-5) to all users. Useful for providing easy access macros for each player.
 
 Game Settings
 -------------
