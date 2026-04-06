@@ -1,5 +1,8 @@
 # Character Vault
 
+## 2.1.2
+
+- Refactor password generation to remove dinopass api due to CORS errors
 
 ## 2.1.1
 

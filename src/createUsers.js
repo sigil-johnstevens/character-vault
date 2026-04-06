@@ -1,4 +1,7 @@
 const MODULE_ID = "character-vault";
+const WORDLIST_URL = `modules/${MODULE_ID}/src/wordlist.txt`;
+const FALLBACK_WORDLIST = ["tiger", "rabbit", "blue", "green", "apple", "banana", "berry", "orange"];
+let WordlistCache = null;
 
 export async function generateUsers() {
   foundry.applications.api.DialogV2.prompt({
@@ -135,19 +138,88 @@ async function createUser(username, folder) {
   return [user, password];
 }
 
-// Get password from DinoPass
+// Generate password locally (avoids CORS failures from browser fetch)
 async function fetchPassword() {
   const passwordType = game.settings.get(MODULE_ID, "passwordStrength") || "simple";
-  const url = `https://www.dinopass.com/password/${passwordType}`;
-  try {
-    // This is Foundry's built-in fetch that works in Node.js (server-side), no CORS issue
-    const response = await foundry.utils.fetchWithTimeout(url, { method: "GET" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return (await response.text()).trim();
-  } catch (err) {
-    console.error("DinoPass fetch failed, using fallback password:", err);
-    return "fallbackPassword123";
+  return generatePassword(passwordType);
+}
+
+async function generatePassword(passwordType) {
+  const wordlist = await getWordlist();
+
+  if (passwordType === "strong") {
+    const words = [
+      capitalize(randomWord(wordlist)),
+      capitalize(randomWord(wordlist)),
+      capitalize(randomWord(wordlist)),
+      capitalize(randomWord(wordlist))
+    ];
+    const digits = String(randomInt(100)).padStart(2, "0");
+    const symbol = randomChar("!@#$%&*");
+    return `${words.join("")}${symbol}${digits}`;
   }
+
+  // "simple" and unknown values default to a readable passphrase.
+  const first = capitalize(randomWord(wordlist));
+  const second = capitalize(randomWord(wordlist));
+  const suffix = String(randomInt(100)).padStart(2, "0");
+  return `${first}${second}${suffix}`;
+}
+
+async function getWordlist() {
+  if (WordlistCache?.length) return WordlistCache;
+
+  try {
+    const response = await fetch(WORDLIST_URL, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const text = await response.text();
+    const words = text
+      .split(/\r?\n/u)
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => line.split(/\s+/u).pop())
+      .filter(Boolean);
+
+    if (!words.length) throw new Error("Wordlist is empty");
+    WordlistCache = words;
+  } catch (err) {
+    console.error("Failed loading wordlist, using fallback list:", err);
+    WordlistCache = FALLBACK_WORDLIST;
+  }
+
+  return WordlistCache;
+}
+
+function randomWord(wordlist) {
+  return wordlist[randomInt(wordlist.length)];
+}
+
+function randomChar(charset) {
+  const index = randomInt(charset.length);
+  return charset.charAt(index);
+}
+
+function randomInt(max) {
+  if (max <= 0) return 0;
+
+  if (globalThis.crypto?.getRandomValues) {
+    const values = new Uint32Array(1);
+    const limit = Math.floor(0x100000000 / max) * max;
+    let number = 0;
+    do {
+      globalThis.crypto.getRandomValues(values);
+      number = values[0];
+    } while (number >= limit);
+    return number % max;
+  }
+
+  return Math.floor(Math.random() * max);
+}
+
+function capitalize(value) {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 // Get a random folder color
