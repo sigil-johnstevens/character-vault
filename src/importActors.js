@@ -2,6 +2,30 @@
 import { getGitHubSettings, getActorFolders } from "./utils.js";
 const MODULE_ID = "character-vault";
 
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => {
+        switch (char) {
+            case "&": return "&amp;";
+            case "<": return "&lt;";
+            case ">": return "&gt;";
+            case "\"": return "&quot;";
+            case "'": return "&#39;";
+            default: return char;
+        }
+    });
+}
+
+function decodeBase64Utf8(base64Content) {
+    const binary = atob(base64Content ?? "");
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    if (globalThis.TextDecoder) {
+        return new TextDecoder("utf-8").decode(bytes);
+    }
+
+    const encoded = Array.from(bytes, byte => `%${byte.toString(16).padStart(2, "0")}`).join("");
+    return decodeURIComponent(encoded);
+}
+
 
 // Get list of actors from GitHub, showing actual names from JSON content
 export async function fetchGitHubActorList() {
@@ -30,7 +54,7 @@ export async function fetchGitHubActorList() {
             });
             if (fileResponse.ok) {
                 const fileData = await fileResponse.json();
-                const fileContent = decodeURIComponent(escape(atob(fileData.content))); // Decode base64 content
+                const fileContent = decodeBase64Utf8(fileData.content);
                 const actorData = JSON.parse(fileContent);
                 return {
                     name: actorData.name || file.name.replace('.json', ''), // Default to filename if no name in JSON
@@ -50,7 +74,7 @@ export async function fetchGitHubActorList() {
 }
 
 // Single Actor import function for use in right click context menu
-export async function openImportDialog() {
+export async function openImportDialog(preselectedActorId = null) {
 
     const githubActors = await fetchGitHubActorList();
     const githubChoices = githubActors.reduce((acc, actor) => {
@@ -65,10 +89,10 @@ export async function openImportDialog() {
     }, {});
 
     const githubActorOptions = Object.entries(githubChoices).map(([value, name]) =>
-        `<option value="${value}">${name}</option>`
+        `<option value="${escapeHtml(value)}">${escapeHtml(name)}</option>`
     ).join('');
     const foundryActorOptions = Object.entries(foundryChoices).map(([value, name]) =>
-        `<option value="${value}">${name}</option>`
+        `<option value="${escapeHtml(value)}"${value === preselectedActorId ? " selected" : ""}>${escapeHtml(name)}</option>`
     ).join('');
 
     const content = `
@@ -123,10 +147,10 @@ export async function openFolderImportDialog() {
     const folderActorFields = folder.contents.map(actor => {
         return `
             <div class="form-group">
-                <label>${actor.name}</label>
-                <select name="${actor.id}">
+                <label>${escapeHtml(actor.name)}</label>
+                <select name="${escapeHtml(actor.id)}">
                     ${Object.entries(githubChoices).map(([fileName, name]) =>
-            `<option value="${fileName}">${name}</option>`
+            `<option value="${escapeHtml(fileName)}">${escapeHtml(name)}</option>`
         ).join('')}
                 </select>
             </div>
@@ -184,7 +208,7 @@ export async function promptForActorFolder() {
                     <label>Select a folder:</label>
                     <select name="folderId" id="folderSelect">
                         ${Object.entries(folderChoices).map(([id, name]) =>
-            `<option value="${id}">${name}</option>`
+            `<option value="${escapeHtml(id)}">${escapeHtml(name)}</option>`
         ).join('')}
                     </select>
                 </div>
@@ -235,7 +259,7 @@ export async function importActorFromGitHubToActor(fileName, actorId) {
 
     if (response.ok) {
         const file = await response.json();
-        const jsonContent = decodeURIComponent(escape(atob(file.content)));
+        const jsonContent = decodeBase64Utf8(file.content);
 
         // Find the existing actor
         const actor = game.actors.get(actorId);

@@ -4,6 +4,11 @@ const FALLBACK_WORDLIST = ["tiger", "rabbit", "blue", "green", "apple", "banana"
 let WordlistCache = null;
 
 export async function generateUsers() {
+  if (!game.user.isGM) {
+    ui.notifications.error("Only a GM can generate users.");
+    return;
+  }
+
   foundry.applications.api.DialogV2.prompt({
     title: "Generate Users",
     content: `
@@ -44,24 +49,36 @@ export async function generateUsers() {
 }
 
 async function processUserGeneration(sessionName, userInput) {
+  if (!game.user.isGM) {
+    ui.notifications.error("Only a GM can generate users.");
+    return;
+  }
+
   const folder = await createOrFindFolder(sessionName);
-  const userNames = userInput.split(",");
+  const userNames = userInput
+    .split(",")
+    .map(name => name.trim())
+    .filter(Boolean);
+
+  if (!userNames.length) {
+    ui.notifications.warn("No valid usernames were provided.");
+    return;
+  }
 
   for (let username of userNames) {
-    const trimmedName = username.trim();
-    const [user, password] = await createUser(trimmedName, folder);
+    const [user, password] = await createUser(username, folder);
     await pushMacros(user);
 
     const inviteURL = game.data.addresses.remote;
 
     const content = `
-      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${trimmedName}</p>
+      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${username}</p>
       <p><strong><i class="fa-solid fa-key"></i> Password:</strong> <code>${password}</code></p>
       <p><strong><i class="fa-solid fa-link"></i> Invite Link:</strong> 
         <a href="${inviteURL}" target="_blank">${inviteURL}</a>
       </p>
       <div style="margin-top: 0.5em;">
-        <button class="copyUserInfo" data-username="${trimmedName}" data-password="${password}" data-url="${inviteURL}">
+        <button class="copyUserInfo" data-username="${username}" data-password="${password}" data-url="${inviteURL}">
           <i class="fa-solid fa-clipboard"></i> Copy Info to Clipboard
         </button>
       </div>

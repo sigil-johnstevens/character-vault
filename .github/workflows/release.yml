@@ -32,7 +32,12 @@ jobs:
 
     # Create a zip file with all files required by the module to add to the release
     - name: Create ZIP
-      run: zip -r ./module.zip src packs license.md module.json index.js
+      run: |
+        files=(src module.json index.js LICENSE.md)
+        if [ -d packs ]; then
+          files+=(packs)
+        fi
+        zip -r ./module.zip "${files[@]}"
 
     # Create a release for this specific version
     - name: Update Release with Files

@@ -16,7 +16,7 @@ Additional bulk actions and utility functions are available to Game Master's via
 - **Generate Users**: Quickly create multiple users and Actors:
   - Define a folder for storing Actors.
   - Provide a comma-separated list of usernames (e.g., Tom,Dick,Harry).
-  - Assign randomly generated passwords using the DinoPass API.
+  - Assign randomly generated passwords.
   - Assign GM macro bar 5 to all users.
   - Create a blank actor for each user and assign it to them
   - Create a chat message with all created usernames and passwords
@@ -40,6 +40,6 @@ To function correctly, these settings must be configured for the module's GitHub
 
 Currently, there is only one setting for user creation.
 
-**Password Strength**: The module uses the [DinoPass API] (<https://www.dinopass.com/api>) to generate user passwords. Simple passwords only have lowercase letters and numbers. Strong passwords have mixed upper- and lower-case letters, a special character (like @, $, !, and so on), and some numbers.
+**Password Strength**: Simple passwords only have lowercase letters and numbers. Strong passwords have mixed upper- and lower-case letters, a special character (like @, $, !, and so on), and some numbers.
 
 ---

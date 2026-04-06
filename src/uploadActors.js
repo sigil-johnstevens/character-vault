@@ -1,10 +1,19 @@
 
-import { getActorFolders, toBase64 } from "./utils.js";
-const MODULE_ID = "character-vault";
+import {
+    getActorFolders,
+    getGitHubSettings,
+    getSanitizedActorFileName,
+    toBase64
+} from "./utils.js";
 
 
 // Step 2: Create a Dialog for Folder Selection
 export async function openFolderUploadDialog() {
+    if (!game.user.isGM) {
+        ui.notifications.error("Only a GM can upload actors to GitHub.");
+        return;
+    }
+
     const choices = getActorFolders().reduce((acc, folder) => {
         acc[folder.id] = folder.name;
         return acc;
@@ -43,9 +52,12 @@ export async function openFolderUploadDialog() {
 
 // Step 3: Function to Upload Actors from Selected Folder
 export async function uploadActorsFromFolderToGitHub(folder) {
-    const repo = game.settings.get(MODULE_ID, "githubRepo");
-    const path = game.settings.get(MODULE_ID, "githubPath");
-    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
+    if (!game.user.isGM) {
+        ui.notifications.error("Only a GM can upload actors to GitHub.");
+        return;
+    }
+
+    const { repo, path, yourPAT } = getGitHubSettings();
 
     for (let actor of folder.contents) {
         const jsonContent = JSON.stringify(actor.toJSON());
@@ -61,9 +73,12 @@ export async function uploadActorsFromFolderToGitHub(folder) {
 
 // Step 4: Function to Upload a Single Actor to GitHub
 export async function uploadActorToGitHub(actor) {
-    const repo = game.settings.get(MODULE_ID, "githubRepo");
-    const path = game.settings.get(MODULE_ID, "githubPath");
-    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
+    if (!game.user.isGM) {
+        ui.notifications.error("Only a GM can upload actors to GitHub.");
+        return;
+    }
+
+    const { repo, path, yourPAT } = getGitHubSettings();
 
     const jsonContent = JSON.stringify(actor.toJSON());
     const success = await uploadToGitHub(actor, jsonContent, repo, path, yourPAT);
@@ -78,8 +93,12 @@ export async function uploadActorToGitHub(actor) {
 // Step 5: Function to Upload to GitHub
 
 export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT) {
-    const sanitizedFileName = actor.name.slugify().replace(/'/g, ''); // Foundry's slugify instance method and removes apostrophes
-    const encodedName = encodeURIComponent(`${sanitizedFileName}.json`);
+    if (!game.user.isGM) {
+        ui.notifications.error("Only a GM can upload actors to GitHub.");
+        return false;
+    }
+
+    const encodedName = getSanitizedActorFileName(actor);
     const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodedName}`;
 
     let sha = null;

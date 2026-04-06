@@ -1,8 +1,15 @@
 # Character Vault
 
-## 2.1.2
+## 2.2.0
 
-- Refactor password generation to remove dinopass api due to CORS errors
+- Add Foundry VTT v14 compatibility
+- Refactor password generation to remove dinopass api due to ongoing CORS errors
+- Add addtional guard rails to import/export functions to ensure GM-only use
+- Improve actor name handling and other html characters in `name`
+- Right-click context import now preselects context actor
+
+### Known Issues
+- Deprecation warning on right context menu. Leaving in place during transition from v13 to v14
 
 ## 2.1.1
 
