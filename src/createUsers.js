@@ -1,13 +1,10 @@
-const MODULE_ID = "character-vault";
+import { MODULE_ID, escapeHtml, requireGm } from "./utils.js";
 const WORDLIST_URL = `modules/${MODULE_ID}/src/wordlist.txt`;
 const FALLBACK_WORDLIST = ["tiger", "rabbit", "blue", "green", "apple", "banana", "berry", "orange"];
 let WordlistCache = null;
 
 export async function generateUsers() {
-  if (!game.user.isGM) {
-    ui.notifications.error("Only a GM can generate users.");
-    return;
-  }
+  if (!requireGm("generate users")) return;
 
   foundry.applications.api.DialogV2.prompt({
     title: "Generate Users",
@@ -49,10 +46,7 @@ export async function generateUsers() {
 }
 
 async function processUserGeneration(sessionName, userInput) {
-  if (!game.user.isGM) {
-    ui.notifications.error("Only a GM can generate users.");
-    return;
-  }
+  if (!requireGm("generate users")) return;
 
   const folder = await createOrFindFolder(sessionName);
   const userNames = userInput
@@ -66,18 +60,21 @@ async function processUserGeneration(sessionName, userInput) {
   }
 
   for (let username of userNames) {
-    const [user, password] = await createUser(username, folder);
+    const [, password] = await createUser(username, folder);
 
     const inviteURL = game.data.addresses.remote;
+    const safeUsername = escapeHtml(username);
+    const safePassword = escapeHtml(password);
+    const safeInviteURL = escapeHtml(inviteURL);
 
     const content = `
-      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${username}</p>
-      <p><strong><i class="fa-solid fa-key"></i> Password:</strong> <code>${password}</code></p>
+      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${safeUsername}</p>
+      <p><strong><i class="fa-solid fa-key"></i> Password:</strong> <code>${safePassword}</code></p>
       <p><strong><i class="fa-solid fa-link"></i> Invite Link:</strong> 
-        <a href="${inviteURL}" target="_blank">${inviteURL}</a>
+        <a href="${safeInviteURL}" target="_blank">${safeInviteURL}</a>
       </p>
       <div style="margin-top: 0.5em;">
-        <button class="copyUserInfo" data-username="${username}" data-password="${password}" data-url="${inviteURL}">
+        <button class="copyUserInfo" data-username="${safeUsername}" data-password="${safePassword}" data-url="${safeInviteURL}">
           <i class="fa-solid fa-clipboard"></i> Copy Info to Clipboard
         </button>
       </div>
@@ -93,7 +90,7 @@ async function processUserGeneration(sessionName, userInput) {
   }
 }
 
-// ✅ Clipboard listener (whisper-compatible and native DOM-safe)
+// Clipboard listener
 Hooks.on("renderChatMessageHTML", (message, htmlElement) => {
   if (!game.user.isGM) return;
 
@@ -121,7 +118,7 @@ Hooks.on("renderChatMessageHTML", (message, htmlElement) => {
       textArea.select();
       try {
         document.execCommand('copy');
-        ui.notifications.info(`📋 Copied info for ${username}`);
+        ui.notifications.info(`Copied info for ${username}`);
       } catch (err) {
         console.error("Fallback copy failed", err);
         ui.notifications.warn("Clipboard copy failed.");
@@ -135,7 +132,7 @@ Hooks.on("renderChatMessageHTML", (message, htmlElement) => {
 async function createOrFindFolder(sessionName) {
   let folder = game.folders.find(f => f.name === sessionName && f.type === "Actor");
   if (!folder) {
-    folder = await Folder.create({ name: sessionName, type: "Actor", color: await fetchRandomColor() });
+    folder = await Folder.create({ name: sessionName, type: "Actor", color: fetchRandomColor() });
   }
   return folder;
 }
@@ -143,13 +140,12 @@ async function createOrFindFolder(sessionName) {
 // Create user and link to actor
 async function createUser(username, folder) {
   const password = await fetchPassword();
-  const color = await fetchRandomColor();
+  const color = fetchRandomColor();
   const actor = await Actor.create({ name: username, type: "character", folder: folder.id });
   const user = await User.create({ name: username, password, character: actor.id, color });
 
-  let owner_obj = {};
-  owner_obj[user.id] = 3; // Owner
-  await actor.update({ ownership: owner_obj });
+  const ownerObj = { [user.id]: 3 }; // Owner
+  await actor.update({ ownership: ownerObj });
 
   return [user, password];
 }
@@ -239,9 +235,10 @@ function capitalize(value) {
 }
 
 // Get a random folder color
-async function fetchRandomColor() {
+function fetchRandomColor() {
   return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0').toUpperCase();
 }
 
 // Global access
 window.generateUsers = generateUsers;
+

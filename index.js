@@ -1,5 +1,4 @@
-const MODULE_ID = "character-vault";
-import { copyGmHotbar } from './src/utils.js';
+import { MODULE_ID, copyGmHotbar } from './src/utils.js';
 
 // Register Access Token, Path, and Repo as Game Settings
 Hooks.once('init', () => {
@@ -60,6 +59,20 @@ import {
     uploadActorToGitHub,
 } from './src/uploadActors.js';
 
+function getDirectoryFooter(html) {
+    const root = html instanceof HTMLElement ? html : html[0];
+    if (!root) return null;
+    return root.querySelector(".directory-footer");
+}
+
+function createActionButton(iconClass, label, onClick) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.innerHTML = `<i class="${iconClass}"></i><span>${label}</span>`;
+    button.addEventListener("click", onClick);
+    return button;
+}
+
 Hooks.once("ready", () => {
     const exports = {
         fetchGitHubActorList,
@@ -74,10 +87,7 @@ Hooks.once("ready", () => {
 Hooks.on("renderActorDirectory", (app, html, data) => {
     if (!game.user.isGM) return;
 
-    const root = html instanceof HTMLElement ? html : html[0];
-    if (!root) return;
-
-    const footer = root.querySelector(".directory-footer");
+    const footer = getDirectoryFooter(html);
     if (!footer) return;
 
     // Avoid duplicate injection
@@ -86,31 +96,21 @@ Hooks.on("renderActorDirectory", (app, html, data) => {
     const wrapper = document.createElement("div");
     wrapper.classList.add("action-buttons", "flexcol", "character-vault-controls");
 
-
-    // Helper to create Foundry-style buttons
-    const createButton = (iconClass, label, onClick) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.innerHTML = `<i class="${iconClass}"></i><span>${label}</span>`;
-        btn.addEventListener("click", onClick);
-        return btn;
-    };
-
     // Button: Generate Users
-    const generateUsersBtn = createButton("fa-solid fa-user-plus", "Generate Users", () => generateUsers());
+    const generateUsersBtn = createActionButton("fa-solid fa-user-plus", "Generate Users", () => generateUsers());
 
     // Button: Import from GitHub
-    const importGitHubBtn = createButton("fa-solid fa-cloud-arrow-down", "Import from GitHub", () => openFolderImportDialog());
+    const importGitHubBtn = createActionButton("fa-solid fa-cloud-arrow-down", "Import from GitHub", () => openFolderImportDialog());
 
     // Button: Delete Non-GM Users
-    const deleteNonGMBtn = createButton("fa-solid fa-user-slash", "Delete Non-GM Users", async () => {
+    const deleteNonGMBtn = createActionButton("fa-solid fa-user-slash", "Delete Non-GM Users", async () => {
         const nonGMs = game.users.filter(user => !user.isGM);
         for (let user of nonGMs) await user.delete();
         ui.notifications.info("All non-GM users have been removed.");
     });
 
     // Button: Upload Folder to GitHub
-    const uploadFolderBtn = createButton("fa-solid fa-cloud-arrow-up", "Upload Folder to GitHub", () => openFolderUploadDialog());
+    const uploadFolderBtn = createActionButton("fa-solid fa-cloud-arrow-up", "Upload Folder to GitHub", () => openFolderUploadDialog());
 
     // Append buttons to wrapper and to footer
     wrapper.appendChild(generateUsersBtn);
@@ -123,10 +123,7 @@ Hooks.on("renderActorDirectory", (app, html, data) => {
 Hooks.on("renderMacroDirectory", (app, html, data) => {
     if (!game.user.isGM) return;
 
-    const root = html instanceof HTMLElement ? html : html[0];
-    if (!root) return;
-
-    const footer = root.querySelector(".directory-footer");
+    const footer = getDirectoryFooter(html);
     if (!footer) return;
 
     if (footer.querySelector(".character-vault-macro-controls")) return;
@@ -134,10 +131,7 @@ Hooks.on("renderMacroDirectory", (app, html, data) => {
     const wrapper = document.createElement("div");
     wrapper.classList.add("action-buttons", "flexcol", "character-vault-macro-controls");
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.innerHTML = `<i class="fa-solid fa-keyboard"></i><span>Copy GM Hotbar</span>`;
-    button.addEventListener("click", () => copyGmHotbar());
+    const button = createActionButton("fa-solid fa-keyboard", "Copy GM Hotbar", () => copyGmHotbar());
 
     wrapper.appendChild(button);
     footer.appendChild(wrapper);

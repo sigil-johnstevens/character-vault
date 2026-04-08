@@ -11,9 +11,123 @@ export function getGitHubSettings() {
     };
 }
 
+export function requireGm(action = "perform this action") {
+    if (game.user?.isGM) return true;
+    ui.notifications.error(`Only a GM can ${action}.`);
+    return false;
+}
+
+export function normalizeGitHubPath(path) {
+    return String(path ?? "").trim().replace(/^\/+|\/+$/g, "");
+}
+
+export function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => {
+        switch (char) {
+            case "&": return "&amp;";
+            case "<": return "&lt;";
+            case ">": return "&gt;";
+            case "\"": return "&quot;";
+            case "'": return "&#39;";
+            default: return char;
+        }
+    });
+}
+
+export function getGitHubAuthHeaders(yourPAT, additionalHeaders = {}) {
+    return {
+        Authorization: `token ${yourPAT}`,
+        ...additionalHeaders
+    };
+}
+
+export function buildGitHubContentsUrl(repo, path, fileName = null) {
+    const normalizedPath = normalizeGitHubPath(path);
+    const baseUrl = `https://api.github.com/repos/${repo}/contents/${normalizedPath}`;
+    if (!fileName) return baseUrl;
+    return `${baseUrl}/${encodeURIComponent(fileName)}`;
+}
+
+export function buildGitHubFolderAccordion(name, choices, defaultPath, hint) {
+    const options = Object.entries(choices).map(([value, label]) => {
+        const selected = value === defaultPath ? " selected" : "";
+        return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
+    }).join("");
+
+    return `
+        <details class="character-vault-github-folder">
+            <summary>GitHub Folder (Default: ${escapeHtml(defaultPath)})</summary>
+            <div class="form-group">
+                <label>GitHub Folder:</label>
+                <select name="${escapeHtml(name)}">
+                    ${options}
+                </select>
+                <p class="hint">${escapeHtml(hint)}</p>
+            </div>
+        </details>
+    `;
+}
+
+export async function fetchGitHubRepoDirectories(repo, yourPAT) {
+    if (!repo || !yourPAT) return [];
+
+    try {
+        const response = await fetch(`https://api.github.com/repos/${repo}/contents`, {
+            method: "GET",
+            headers: getGitHubAuthHeaders(yourPAT)
+        });
+
+        if (!response.ok) return [];
+
+        const entries = await response.json();
+        if (!Array.isArray(entries)) return [];
+        return entries
+            .filter(entry => entry?.type === "dir" && entry?.name)
+            .map(entry => normalizeGitHubPath(entry.name))
+            .filter(Boolean);
+    } catch (error) {
+        console.warn("Character Vault: Failed to fetch repository folders.", error);
+        return [];
+    }
+}
+
+export async function getGitHubPathChoices({ repo, path, yourPAT }, fallbackPath = "actors") {
+    const defaultPath = normalizeGitHubPath(path);
+    const repoDirectories = await fetchGitHubRepoDirectories(repo, yourPAT);
+
+    const uniquePaths = [];
+    const seen = new Set();
+    for (const candidate of [defaultPath, ...repoDirectories]) {
+        const normalized = normalizeGitHubPath(candidate);
+        if (!normalized || seen.has(normalized)) continue;
+        seen.add(normalized);
+        uniquePaths.push(normalized);
+    }
+
+    if (!uniquePaths.length && defaultPath) uniquePaths.push(defaultPath);
+    if (!uniquePaths.length) uniquePaths.push(normalizeGitHubPath(fallbackPath) || "actors");
+
+    const choices = uniquePaths.reduce((acc, folderPath) => {
+        acc[folderPath] = folderPath;
+        return acc;
+    }, {});
+
+    return {
+        choices,
+        defaultPath: uniquePaths[0]
+    };
+}
+
 // Get all actor folders
 export function getActorFolders() {
     return game.folders.filter(f => f.type === "Actor");
+}
+
+export function getActorFolderChoices() {
+    return getActorFolders().reduce((acc, folder) => {
+        acc[folder.id] = folder.name;
+        return acc;
+    }, {});
 }
 
 // Slugify and sanitize actor name for filenames
@@ -44,10 +158,7 @@ async function copyHotbarPage(user, sourceBar) {
 }
 
 export async function copyGmHotbar() {
-    if (!game.user.isGM) {
-        ui.notifications.error("Only a GM can copy hotbar macros.");
-        return;
-    }
+    if (!requireGm("copy hotbar macros")) return;
 
     const content = `
         <form>

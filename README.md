@@ -39,7 +39,7 @@ Game Settings
 To function correctly, these settings must be configured for the module's GitHub integration features.
 
 *   **GitHub Repository**: This is the repository's name on GitHub. Only `username/repo-name`. For example, this module is `username/character-vault`.
-*   **GitHub Path**: The folder or subfolder where the relevant actor data is stored. If desired, you can set up multiple folders for different groups/games. The default is  `actors`
+*   **GitHub Path**: The default folder or subfolder where the relevant actor data is stored. If desired, you can set up multiple folders for different groups/games and use the accordion menu to chose them from the dialog. The default is  `actors`
 *   **GitHub Personal Access Token:** This is the area where the GitHub user enters their [GitHub Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). The token must have Content read/write access.
 
 ### User Settings
