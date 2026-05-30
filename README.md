@@ -20,7 +20,7 @@ Actor Directory buttons:
     *   Variables
         *   Define a folder new actors (default is "Heroes").
         *   Provide a comma-separated list of usernames (e.g., Valeros,Seoni,Kyra).
-        *   Use a `+N` to create additional actors for a user (e.g., Valeros+2,Seoni,Kyra creates two additonal actors assigned to Valeros). Helpful for heroes with followers or summons.
+        *   Use a `+N` to create additional actors for a user (e.g., Valeros+2,Seoni,Kyra creates two additional actors assigned to Valeros). Helpful for heroes with followers or summons.
     *   Outputs
         *   Assign randomly generated passwords.
         *   Create a blank actor for each user and assign it to them
