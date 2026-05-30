@@ -55,29 +55,30 @@ async function processUserGeneration(sessionName, userInput) {
   }
 
   const folder = await createOrFindFolder(sessionName);
-  const userNames = userInput
+  // A username can include "+N" to create N extra actors for the same user.
+  const userEntries = userInput
     .split(",")
-    .map(name => name.trim())
-    .filter(Boolean);
+    .map(parseUserEntry)
+    .filter(entry => entry.username);
 
-  if (!userNames.length) {
+  if (!userEntries.length) {
     ui.notifications.warn("No valid usernames were provided.");
     return;
   }
 
-  for (let username of userNames) {
-    const [user, password] = await createUser(username, folder);
+  for (let userEntry of userEntries) {
+    const [user, password] = await createUser(userEntry.username, folder, userEntry.additionalActors);
 
     const inviteURL = game.data.addresses.remote;
 
     const content = `
-      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${username}</p>
+      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${userEntry.username}</p>
       <p><strong><i class="fa-solid fa-key"></i> Password:</strong> <code>${password}</code></p>
       <p><strong><i class="fa-solid fa-link"></i> Invite Link:</strong> 
         <a href="${inviteURL}" target="_blank">${inviteURL}</a>
       </p>
       <div style="margin-top: 0.5em;">
-        <button class="copyUserInfo" data-username="${username}" data-password="${password}" data-url="${inviteURL}">
+        <button class="copyUserInfo" data-username="${userEntry.username}" data-password="${password}" data-url="${inviteURL}">
           <i class="fa-solid fa-clipboard"></i> Copy Info to Clipboard
         </button>
       </div>
@@ -93,7 +94,7 @@ async function processUserGeneration(sessionName, userInput) {
   }
 }
 
-// ✅ Clipboard listener (whisper-compatible and native DOM-safe)
+// Clipboard listener (whisper-compatible and native DOM-safe)
 Hooks.on("renderChatMessageHTML", (message, htmlElement) => {
   if (!game.user.isGM) return;
 
@@ -131,6 +132,16 @@ Hooks.on("renderChatMessageHTML", (message, htmlElement) => {
   });
 });
 
+function parseUserEntry(entry) {
+  // Keep "+N" as generation syntax only; the actual username stays clean.
+  const match = entry.trim().match(/^(.+?)(?:\+(\d+))?$/u);
+
+  return {
+    username: match?.[1]?.trim() ?? "",
+    additionalActors: Number(match?.[2] ?? 0)
+  };
+}
+
 // Actor folder logic
 async function createOrFindFolder(sessionName) {
   let folder = game.folders.find(f => f.name === sessionName && f.type === "Actor");
@@ -141,7 +152,7 @@ async function createOrFindFolder(sessionName) {
 }
 
 // Create user and link to actor
-async function createUser(username, folder) {
+async function createUser(username, folder, additionalActors = 0) {
   const password = await fetchPassword();
   const color = await fetchRandomColor();
   const actor = await Actor.create({ name: username, type: "character", folder: folder.id });
@@ -150,6 +161,12 @@ async function createUser(username, folder) {
   let owner_obj = {};
   owner_obj[user.id] = 3; // Owner
   await actor.update({ ownership: owner_obj });
+
+  // Extra actors use the same owner but do not create additional users.
+  for (let i = 1; i <= additionalActors; i++) {
+    const extraActor = await Actor.create({ name: `${username} ${i}`, type: "character", folder: folder.id });
+    await extraActor.update({ ownership: owner_obj });
+  }
 
   return [user, password];
 }
