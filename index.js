@@ -1,5 +1,8 @@
 const MODULE_ID = "character-vault";
-import { copyGmHotbar } from './src/utils.js';
+import {
+    copyGmHotbar,
+    fetchGitHubFolderList
+} from './src/utils.js';
 
 // Register Access Token, Path, and Repo as Game Settings
 Hooks.once('init', () => {
@@ -13,8 +16,8 @@ Hooks.once('init', () => {
     });
 
     game.settings.register(MODULE_ID, "githubPath", {
-        name: "GitHub Path",
-        hint: "The path within the GitHub repository to the folder containing the actor JSON files.",
+        name: "Default GitHub Path",
+        hint: "The default folder path from GitHub repository containing actor JSON files.",
         scope: "world",
         config: true,
         type: String,
@@ -56,6 +59,7 @@ import {
     importActorFromGitHubToActor
 } from './src/importActors.js';
 import {
+    openActorUploadDialog,
     openFolderUploadDialog,
     uploadActorToGitHub,
 } from './src/uploadActors.js';
@@ -63,9 +67,12 @@ import {
 Hooks.once("ready", () => {
     const exports = {
         fetchGitHubActorList,
+        fetchGitHubFolderList,
         openImportDialog,
         importActorFromGitHubToActor,
         openFolderImportDialog,
+        openActorUploadDialog,
+        uploadActorToGitHub,
     };
     Object.entries(exports).forEach(([key, fn]) => window[key] = fn);
     console.log("Character Vault: Functions are now globally available.");
@@ -146,19 +153,34 @@ Hooks.on("renderMacroDirectory", (app, html, data) => {
 
 // Context Menu Function
 Hooks.on("getActorContextOptions", (html, options) => {
-    const getActor = (/** @type {HTMLElement} */ li) => game.actors.get(li.dataset.entryId);
+    const getActor = (...args) => {
+        for (const arg of args) {
+            const element = arg instanceof HTMLElement ? arg : arg?.currentTarget ?? arg?.target;
+            const row = element?.dataset?.entryId ? element : element?.closest?.("[data-entry-id]");
+            const actor = row ? game.actors.get(row.dataset.entryId) : null;
+            if (actor) return actor;
+        }
+
+        return null;
+    };
 
     options.push({
-        name: "Import from GitHub",
+        label: "Import from GitHub",
         icon: '<i class="fa-solid fa-cloud-arrow-down"></i>',
-        condition: (li) => getActor(li)?.isOwner,
-        callback: (li) => openImportDialog(getActor(li).id)
+        visible: (li) => getActor(li)?.isOwner,
+        onClick: (event, li) => {
+            const actor = getActor(li, event);
+            if (actor) openImportDialog(actor.id);
+        }
     });
 
     options.push({
-        name: "Export to GitHub",
+        label: "Export to GitHub",
         icon: '<i class="fa-solid fa-cloud-arrow-up"></i>',
-        condition: (li) => game.user.isGM && getActor(li)?.isOwner,
-        callback: (li) => uploadActorToGitHub(getActor(li))
+        visible: (li) => game.user.isGM && getActor(li)?.isOwner,
+        onClick: (event, li) => {
+            const actor = getActor(li, event);
+            if (actor) openActorUploadDialog(actor);
+        }
     });
 });
