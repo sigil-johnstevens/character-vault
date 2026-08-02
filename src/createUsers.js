@@ -28,12 +28,18 @@ export async function generateUsers() {
     `,
     ok: {
       label: "Generate",
-      callback: async (event, button) => {
+      callback: (event, button) => {
         const formData = new FormData(button.form);
         const sessionName = formData.get("sessionName")?.trim();
         const userInput = formData.get("userInput")?.trim();
         if (sessionName && userInput) {
-          await processUserGeneration(sessionName, userInput);
+          // Let DialogV2 close this form before opening the batch progress dialog.
+          setTimeout(() => {
+            void processUserGeneration(sessionName, userInput).catch(error => {
+              console.error("Character Vault user generation failed:", error);
+              ui.notifications.error(error.message || "User generation failed.");
+            });
+          }, 0);
         }
       }
     },
@@ -315,6 +321,3 @@ function capitalize(value) {
 async function fetchRandomColor() {
   return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0').toUpperCase();
 }
-
-// Global access
-window.generateUsers = generateUsers;

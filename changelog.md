@@ -4,6 +4,7 @@
 
 - Consolidate github functions into `gitHubClient.js` to reduce duplication of git actions
 - Pre-load default directory actor list on world `ready` to speed up import dialog wait times
+- Expose module functions via foundry module api
 
 ## 2.2.1
 
