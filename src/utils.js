@@ -1,5 +1,7 @@
 // Utility functions for character-vault module
 
+import { fetchGitHubTree } from "./githubClient.js";
+
 export const MODULE_ID = "character-vault";
 
 // Get FoundryVTT settings for GitHub integration
@@ -72,25 +74,12 @@ function isVisibleGitHubPath(path) {
 }
 
 export async function fetchGitHubFolderList() {
-    const { repo, path, yourPAT } = getGitHubSettings();
+    const { path } = getGitHubSettings();
     const defaultPath = normalizeGitHubPath(path);
     const folders = new Set([defaultPath]);
-    const url = `https://api.github.com/repos/${repo}/git/trees/main?recursive=1`;
 
     try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `token ${yourPAT}`,
-            }
-        });
-
-        if (!response.ok) {
-            console.error('Error fetching GitHub folder list:', response.statusText);
-            return dedupeGitHubPaths([...folders]);
-        }
-
-        const data = await response.json();
+        const data = await fetchGitHubTree();
         for (const entry of data.tree ?? []) {
             if (entry.type === "tree") {
                 if (isVisibleGitHubPath(entry.path)) folders.add(entry.path);
@@ -101,6 +90,8 @@ export async function fetchGitHubFolderList() {
         }
     } catch (error) {
         console.error('Failed to fetch GitHub folder list:', error);
+        ui.notifications.error(error.message || "Failed to fetch GitHub folder list.");
+        return null;
     }
 
     return dedupeGitHubPaths([...folders]);

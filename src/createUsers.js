@@ -1,3 +1,5 @@
+import { runBatchOperation } from "./batchOperation.js";
+
 const MODULE_ID = "character-vault";
 const WORDLIST_URL = `modules/${MODULE_ID}/src/wordlist.txt`;
 const FALLBACK_WORDLIST = ["tiger", "rabbit", "blue", "green", "apple", "banana", "berry", "orange"];
@@ -72,36 +74,43 @@ async function processUserGeneration(sessionName, userInput) {
     return;
   }
 
-  for (let userEntry of userEntries) {
-    const [user, password, actorCount] = await createUser(userEntry.username, folder, userEntry.additionalActors);
+  await runBatchOperation({
+    title: "Generate Users",
+    items: userEntries,
+    getLabel: entry => entry.username,
+    completedVerb: "Generated",
+    itemName: "user",
+    runItem: async userEntry => {
+      const [user, password, actorCount] = await createUser(userEntry.username, folder, userEntry.additionalActors);
+      const inviteURL = game.data.addresses.remote;
+      const escapedUsername = escapeHTML(userEntry.username);
+      const escapedPassword = escapeHTML(password);
+      const escapedInviteURL = escapeHTML(inviteURL);
 
-    const inviteURL = game.data.addresses.remote;
-    const escapedUsername = escapeHTML(userEntry.username);
-    const escapedPassword = escapeHTML(password);
-    const escapedInviteURL = escapeHTML(inviteURL);
+      const content = `
+        <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${escapedUsername}</p>
+        <p><strong><i class="fa-solid fa-users"></i> Actors Created:</strong> ${actorCount}</p>
+        <p><strong><i class="fa-solid fa-key"></i> Password:</strong> <code>${escapedPassword}</code></p>
+        <p><strong><i class="fa-solid fa-link"></i> Invite Link:</strong>
+          <a href="${escapedInviteURL}" target="_blank" rel="noopener">${escapedInviteURL}</a>
+        </p>
+        <div style="margin-top: 0.5em;">
+          <button class="copyUserInfo" data-username="${escapedUsername}" data-password="${escapedPassword}" data-url="${escapedInviteURL}">
+            <i class="fa-solid fa-clipboard"></i> Copy Info to Clipboard
+          </button>
+        </div>
+      `;
 
-    const content = `
-      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${escapedUsername}</p>
-      <p><strong><i class="fa-solid fa-users"></i> Actors Created:</strong> ${actorCount}</p>
-      <p><strong><i class="fa-solid fa-key"></i> Password:</strong> <code>${escapedPassword}</code></p>
-      <p><strong><i class="fa-solid fa-link"></i> Invite Link:</strong> 
-        <a href="${escapedInviteURL}" target="_blank" rel="noopener">${escapedInviteURL}</a>
-      </p>
-      <div style="margin-top: 0.5em;">
-        <button class="copyUserInfo" data-username="${escapedUsername}" data-password="${escapedPassword}" data-url="${escapedInviteURL}">
-          <i class="fa-solid fa-clipboard"></i> Copy Info to Clipboard
-        </button>
-      </div>
-    `;
-
-    await ChatMessage.create({
-      user: game.user.id,
-      speaker: ChatMessage.getSpeaker(),
-      content,
-      style: CONST.CHAT_MESSAGE_STYLES.OTHER,
-      whisper: ChatMessage.getWhisperRecipients("GM")
-    });
-  }
+      await ChatMessage.create({
+        user: game.user.id,
+        speaker: ChatMessage.getSpeaker(),
+        content,
+        style: CONST.CHAT_MESSAGE_STYLES.OTHER,
+        whisper: ChatMessage.getWhisperRecipients("GM")
+      });
+      return { ok: true, user };
+    }
+  });
 }
 
 // Clipboard listener (whisper-compatible and native DOM-safe)

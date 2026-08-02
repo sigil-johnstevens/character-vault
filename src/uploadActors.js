@@ -1,16 +1,15 @@
 
 import {
-    buildGitHubContentsUrl,
     buildGitHubPathOptions,
     escapeHtml,
     fetchGitHubFolderList,
     getActorFolders,
     getDefaultGitHubPath,
-    getGitHubSettings,
     getSanitizedActorFileName,
-    normalizeGitHubPath,
-    toBase64
+    normalizeGitHubPath
 } from "./utils.js";
+import { getGitHubFileShas, putGitHubFileContent } from "./githubClient.js";
+import { runBatchOperation } from "./batchOperation.js";
 
 
 // Step 2: Create a Dialog for Folder Selection
@@ -25,6 +24,7 @@ export async function openFolderUploadDialog() {
         return acc;
     }, {});
     const githubPaths = await fetchGitHubFolderList();
+    if (!githubPaths) return;
     const defaultPath = getDefaultGitHubPath();
     const initialPath = githubPaths.includes(defaultPath) ? defaultPath : githubPaths[0];
     const githubPathOptions = buildGitHubPathOptions(githubPaths, initialPath);
@@ -76,6 +76,7 @@ export async function openActorUploadDialog(actor) {
     }
 
     const githubPaths = await fetchGitHubFolderList();
+    if (!githubPaths) return;
     const defaultPath = getDefaultGitHubPath();
     const initialPath = githubPaths.includes(defaultPath) ? defaultPath : githubPaths[0];
     const githubPathOptions = buildGitHubPathOptions(githubPaths, initialPath);
@@ -123,21 +124,34 @@ export async function uploadActorsFromFolderToGitHub(folder, pathOverride = null
         return;
     }
 
-    const { repo, path: defaultPath, yourPAT } = getGitHubSettings();
-    const path = normalizeGitHubPath(pathOverride ?? defaultPath);
-    const existingShas = await fetchExistingGitHubFileShas(repo, path, yourPAT);
-
-    for (let actor of folder.contents) {
-        const jsonContent = JSON.stringify(actor.toJSON());
-        const fileName = getSanitizedActorFileName(actor);
-        const success = await uploadToGitHub(actor, jsonContent, repo, path, yourPAT, existingShas.get(fileName) ?? null);
-
-        if (success) {
-            ui.notifications.info(`${actor.name} has been successfully uploaded to GitHub.`);
-        } else {
-            ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
-        }
+    const path = normalizeGitHubPath(pathOverride ?? getDefaultGitHubPath());
+    let existingShas;
+    try {
+        existingShas = await getGitHubFileShas(path);
+    } catch (error) {
+        console.error("Failed to inspect the GitHub upload path:", error);
+        ui.notifications.error(error.message || "Failed to inspect the GitHub upload path.");
+        return;
     }
+
+    const actors = [...folder.contents];
+    if (!actors.length) {
+        ui.notifications.info("The selected Actor folder is empty.");
+        return;
+    }
+
+    await runBatchOperation({
+        title: "Upload Actors to GitHub",
+        items: actors,
+        getLabel: actor => actor.name,
+        completedVerb: "Uploaded",
+        itemName: "Actor",
+        runItem: actor => {
+            const jsonContent = JSON.stringify(actor.toJSON());
+            const fileName = getSanitizedActorFileName(actor);
+            return uploadToGitHub(actor, jsonContent, path, existingShas.get(fileName) ?? null);
+        }
+    });
 }
 
 // Step 4: Function to Upload a Single Actor to GitHub
@@ -147,86 +161,44 @@ export async function uploadActorToGitHub(actor, pathOverride = null) {
         return;
     }
 
-    const { repo, path: defaultPath, yourPAT } = getGitHubSettings();
-    const path = normalizeGitHubPath(pathOverride ?? defaultPath);
-    const existingShas = await fetchExistingGitHubFileShas(repo, path, yourPAT);
+    const path = normalizeGitHubPath(pathOverride ?? getDefaultGitHubPath());
+    let existingShas;
+    try {
+        existingShas = await getGitHubFileShas(path);
+    } catch (error) {
+        console.error("Failed to inspect the GitHub upload path:", error);
+        ui.notifications.error(error.message || "Failed to inspect the GitHub upload path.");
+        return;
+    }
     const fileName = getSanitizedActorFileName(actor);
 
     const jsonContent = JSON.stringify(actor.toJSON());
-    const success = await uploadToGitHub(actor, jsonContent, repo, path, yourPAT, existingShas.get(fileName) ?? null);
+    const result = await uploadToGitHub(actor, jsonContent, path, existingShas.get(fileName) ?? null);
 
-    if (success) {
+    if (result.ok) {
         ui.notifications.info(`${actor.name} has been successfully uploaded to GitHub.`);
     } else {
-        ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub.`);
+        ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub: ${result.error.message}`);
     }
 }
 
 // Step 5: Function to Upload to GitHub
-
-async function fetchExistingGitHubFileShas(repo, path, yourPAT) {
-    const shas = new Map();
-
-    try {
-        const response = await fetch(buildGitHubContentsUrl(repo, path), {
-            method: 'GET',
-            headers: {
-                'Authorization': `token ${yourPAT}`,
-            }
-        });
-
-        if (!response.ok) return shas;
-
-        const entries = await response.json();
-        if (!Array.isArray(entries)) return shas;
-
-        for (const entry of entries) {
-            if (entry.type === "file" && entry.name?.endsWith(".json")) {
-                shas.set(entry.name, entry.sha);
-            }
-        }
-    } catch (error) {
-        console.error('Folder contents check error:', error);
-    }
-
-    return shas;
-}
-
-export async function uploadToGitHub(actor, jsonContent, repo, path, yourPAT, sha = null) {
+export async function uploadToGitHub(actor, jsonContent, path, sha = null) {
     if (!game.user.isGM) {
         ui.notifications.error("Only a GM can upload actors to GitHub.");
-        return false;
+        return { ok: false, error: new Error("Only a GM can upload actors to GitHub.") };
     }
 
     const fileName = getSanitizedActorFileName(actor);
-    const url = buildGitHubContentsUrl(repo, path, fileName);
-
-    // Step 2: Upload the actor data to GitHub
     try {
-        const body = {
-            message: `Updating character ${actor.name}`,
-            content: toBase64(jsonContent), // Convert JSON content to base64
-            branch: "main",
-        };
-        if (sha) body.sha = sha;
-
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${yourPAT}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
+        const payload = await putGitHubFileContent(fileName, jsonContent, {
+            path,
+            sha,
+            message: `Updating character ${actor.name}`
         });
-
-        if (response.ok) {
-            return true;
-        } else {
-            console.error('Upload error:', await response.text());
-            return false;
-        }
+        return { ok: true, payload };
     } catch (error) {
-        console.error('Export error:', error);
-        return false;
+        console.error("Failed to upload actor to GitHub:", error);
+        return { ok: false, error };
     }
 }
