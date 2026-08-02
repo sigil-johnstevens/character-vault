@@ -1,79 +1,134 @@
 
 import {
-    buildGitHubContentsUrl,
     buildGitHubPathOptions,
     escapeHtml,
-    fetchGitHubFolderList,
     getActorFolders,
-    getDefaultGitHubPath,
-    getDialogElement,
-    getGitHubSettings,
-    normalizeGitHubPath
+    getDialogElement
 } from "./utils.js";
-const MODULE_ID = "character-vault";
+import {
+    fetchGitHubFolderList,
+    getDefaultGitHubPath,
+    getGitHubConfiguration,
+    getGitHubFileContent,
+    listGitHubDirectory,
+    normalizeGitHubPath
+} from "./githubClient.js";
+import { runBatchOperation } from "./batchOperation.js";
 
-function decodeBase64Utf8(base64Content) {
-    const binary = atob(base64Content ?? "");
-    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
-    if (globalThis.TextDecoder) {
-        return new TextDecoder("utf-8").decode(bytes);
+const ActorListCache = new Map();
+
+async function mapWithConcurrency(items, concurrency, callback) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+
+    async function worker() {
+        while (nextIndex < items.length) {
+            const index = nextIndex++;
+            results[index] = await callback(items[index], index);
+        }
     }
 
-    const encoded = Array.from(bytes, byte => `%${byte.toString(16).padStart(2, "0")}`).join("");
-    return decodeURIComponent(encoded);
+    const workerCount = Math.min(concurrency, items.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    return results;
+}
+
+async function importFromJsonSilently(actor, jsonContent) {
+    const notifications = ui?.notifications;
+    if (!notifications || typeof notifications.notify !== "function") {
+        return actor.importFromJSON(jsonContent);
+    }
+
+    const originalNotify = notifications.notify;
+    notifications.notify = function(message, type = "info", options = {}) {
+        // Batch progress replaces Foundry's per-document informational import toasts.
+        // Warnings and errors still pass through normally.
+        if (String(type) === "info") return null;
+        return originalNotify.call(this, message, type, options);
+    };
+
+    try {
+        return await actor.importFromJSON(jsonContent);
+    } finally {
+        notifications.notify = originalNotify;
+    }
 }
 
 // Get list of actors from GitHub, showing actual names from JSON content
-export async function fetchGitHubActorList(pathOverride = null) {
-    const { repo, path: defaultPath, yourPAT } = getGitHubSettings();
-    const path = normalizeGitHubPath(pathOverride ?? defaultPath);
+function actorListCacheKey(path) {
+    const { repo, branch } = getGitHubConfiguration();
+    return `${repo}\n${branch}\n${path}`;
+}
 
-    const url = buildGitHubContentsUrl(repo, path);
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': `token ${yourPAT}`,
-        }
-    });
+export function invalidateGitHubActorListCache(pathOverride = null) {
+    if (pathOverride === null) {
+        ActorListCache.clear();
+        return;
+    }
 
-    if (response.ok) {
-        const files = await response.json();
+    ActorListCache.delete(actorListCacheKey(normalizeGitHubPath(pathOverride)));
+}
 
-        // Filter JSON files
-        const jsonFiles = files.filter(file => file.name.endsWith('.json'));
-        // Fetch all file contents in parallel
-        const actorPromises = jsonFiles.map(async (file) => {
-            const fileResponse = await fetch(buildGitHubContentsUrl(repo, path, file.name), {
-                method: 'GET',
-                headers: {
-                    'Authorization': `token ${yourPAT}`
+export async function fetchGitHubActorList(pathOverride = null, { force = false, notify = true } = {}) {
+    const path = normalizeGitHubPath(pathOverride ?? getDefaultGitHubPath());
+    const cacheKey = actorListCacheKey(path);
+    let cache = ActorListCache.get(cacheKey);
+
+    if (force || !cache) {
+        cache = {};
+        ActorListCache.set(cacheKey, cache);
+    }
+    if (cache.value) return cache.value;
+
+    if (!cache.promise) {
+        cache.promise = (async () => {
+            const files = await listGitHubDirectory(path);
+            const jsonFiles = files.filter(file => file.type === "file" && file.name?.endsWith(".json"));
+            const actorList = await mapWithConcurrency(jsonFiles, 4, async file => {
+                try {
+                    const fileContent = await getGitHubFileContent(file.name, path);
+                    const actorData = JSON.parse(fileContent);
+                    return {
+                        name: actorData.name || file.name.replace(/\.json$/u, ""),
+                        fileName: file.name
+                    };
+                } catch (error) {
+                    console.warn(`Character Vault skipped invalid GitHub actor file ${file.name}:`, error);
+                    return null;
                 }
             });
-            if (fileResponse.ok) {
-                const fileData = await fileResponse.json();
-                const fileContent = decodeBase64Utf8(fileData.content);
-                const actorData = JSON.parse(fileContent);
-                return {
-                    name: actorData.name || file.name.replace('.json', ''), // Default to filename if no name in JSON
-                    fileName: file.name
-                };
-            } else {
-                console.error(`Failed to fetch JSON content for ${file.name}`);
-                return null;
-            }
+            cache.value = actorList.filter(Boolean);
+            return cache.value;
+        })().finally(() => {
+            cache.promise = null;
         });
-        const actorList = (await Promise.all(actorPromises)).filter(Boolean);
-        return actorList;
-    } else {
-        console.error('Error fetching actor list from GitHub:', response.statusText);
+    }
+
+    try {
+        return await cache.promise;
+    } catch (error) {
+        console.error("Failed to fetch the GitHub actor list:", error);
+        if (ActorListCache.get(cacheKey) === cache) ActorListCache.delete(cacheKey);
+        if (notify) ui.notifications.error(error.message || "Failed to fetch the GitHub actor list.");
         return [];
     }
+}
+
+export async function preloadGitHubImportData() {
+    if (!game.user.isGM && !game.actors.some(actor => actor.isOwner)) return;
+
+    const defaultPath = getDefaultGitHubPath();
+    await Promise.all([
+        fetchGitHubFolderList({ notify: false }),
+        fetchGitHubActorList(defaultPath, { notify: false })
+    ]);
 }
 
 // Single Actor import function for use in right click context menu
 export async function openImportDialog(preselectedActorId = null) {
 
     const githubPaths = await fetchGitHubFolderList();
+    if (!githubPaths) return;
     const defaultPath = getDefaultGitHubPath();
     const initialPath = githubPaths.includes(defaultPath) ? defaultPath : githubPaths[0];
     const githubActors = await fetchGitHubActorList(initialPath);
@@ -166,6 +221,7 @@ export async function openFolderImportDialog() {
     if (!folder) return;
 
     const githubPaths = await fetchGitHubFolderList();
+    if (!githubPaths) return;
     const defaultPath = getDefaultGitHubPath();
     const initialPath = githubPaths.includes(defaultPath) ? defaultPath : githubPaths[0];
     const actorList = await fetchGitHubActorList(initialPath);
@@ -233,13 +289,39 @@ export async function openFolderImportDialog() {
                 const form = button.form; // Get the form from the button context
                 const formData = new FormData(form);
 
+                const imports = [];
                 for (const actor of folder.contents) {
                     const selectedPath = formData.get(`${actor.id}-path`);
                     const selectedFile = formData.get(`${actor.id}-file`);
                     if (selectedPath !== null && selectedFile) {
-                        await importActorFromGitHubToActor(selectedFile, actor.id, selectedPath);
+                        imports.push({ actor, path: selectedPath, fileName: selectedFile });
                     }
                 }
+
+                if (!imports.length) {
+                    ui.notifications.info("No Actors were selected for import.");
+                    return;
+                }
+
+                // Let DialogV2 finish closing this selection dialog before opening progress.
+                setTimeout(() => {
+                    void runBatchOperation({
+                        title: "Import Actors from GitHub",
+                        items: imports,
+                        getLabel: entry => entry.actor.name,
+                        completedVerb: "Imported",
+                        itemName: "Actor",
+                        runItem: entry => importActorFromGitHubToActor(
+                            entry.fileName,
+                            entry.actor.id,
+                            entry.path,
+                            { notify: false }
+                        )
+                    }).catch(error => {
+                        console.error("Character Vault folder import failed:", error);
+                        ui.notifications.error(error.message || "The folder import failed.");
+                    });
+                }, 0);
             }
         },
         cancel: {
@@ -309,41 +391,32 @@ export async function promptForActorFolder() {
 }
 
 // Function to import the actor from GitHub to Foundry using the built-in importFromJSON function
-export async function importActorFromGitHubToActor(fileName, actorId, pathOverride = null) {
-    const repo = game.settings.get(MODULE_ID, "githubRepo");
-    const path = normalizeGitHubPath(pathOverride ?? game.settings.get(MODULE_ID, "githubPath"));
-    const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
+export async function importActorFromGitHubToActor(fileName, actorId, pathOverride = null, { notify = true } = {}) {
+    const path = normalizeGitHubPath(pathOverride ?? getDefaultGitHubPath());
+    const actor = game.actors.get(actorId);
 
-    const url = buildGitHubContentsUrl(repo, path, fileName);
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': `token ${yourPAT}`,
-        }
-    });
+    if (!actor) {
+        const error = new Error("Actor not found.");
+        if (notify) ui.notifications.error(error.message);
+        console.error("Actor not found:", actorId);
+        return { ok: false, error };
+    }
 
-    if (response.ok) {
-        const file = await response.json();
-        const jsonContent = decodeBase64Utf8(file.content);
-
-        // Find the existing actor
-        const actor = game.actors.get(actorId);
-
-        if (!actor) {
-            ui.notifications.error('Actor not found.');
-            console.error('Actor not found:', actorId);
-            return;
-        }
-
-        try {
-            // Use the importFromJSON function to import the data
+    try {
+        const jsonContent = await getGitHubFileContent(fileName, path);
+        JSON.parse(jsonContent);
+        if (notify) {
             await actor.importFromJSON(jsonContent);
-        } catch (error) {
-            console.error('Failed to import actor:', error);
-            ui.notifications.error('Failed to import actor from JSON.');
+        } else {
+            await importFromJsonSilently(actor, jsonContent);
         }
-    } else {
-        console.error('Error fetching actor JSON from GitHub:', response.statusText);
-        ui.notifications.error('Failed to fetch actor from GitHub.');
+        return { ok: true, actor };
+    } catch (error) {
+        console.error("Failed to import actor from GitHub:", error);
+        const message = error instanceof SyntaxError
+            ? "The selected GitHub file does not contain valid JSON."
+            : error.message || "Failed to import actor from GitHub.";
+        if (notify) ui.notifications.error(message);
+        return { ok: false, error: new Error(message, { cause: error }) };
     }
 }

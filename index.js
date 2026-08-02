@@ -1,8 +1,9 @@
 const MODULE_ID = "character-vault";
 import {
     copyGmHotbar,
-    fetchGitHubFolderList
+    escapeHtml
 } from './src/utils.js';
+import { fetchGitHubFolderList } from './src/githubClient.js';
 
 // Register Access Token, Path, and Repo as Game Settings
 Hooks.once('init', () => {
@@ -22,6 +23,15 @@ Hooks.once('init', () => {
         config: true,
         type: String,
         default: "actors",
+    });
+
+    game.settings.register(MODULE_ID, "githubBranch", {
+        name: "GitHub Branch",
+        hint: "The GitHub branch containing your actor JSON files.",
+        scope: "world",
+        config: true,
+        type: String,
+        default: "main",
     });
 
     game.settings.register(MODULE_ID, "githubPAT", {
@@ -54,6 +64,7 @@ Hooks.once('init', () => {
 import { generateUsers } from './src/createUsers.js';
 import {
     fetchGitHubActorList,
+    preloadGitHubImportData,
     openImportDialog,
     openFolderImportDialog,
     importActorFromGitHubToActor
@@ -76,6 +87,9 @@ Hooks.once("ready", () => {
     };
     Object.entries(exports).forEach(([key, fn]) => window[key] = fn);
     console.log("Character Vault: Functions are now globally available.");
+    void preloadGitHubImportData().catch(error => {
+        console.debug("Character Vault could not preload GitHub import data.", error);
+    });
 });
 
 Hooks.on("renderActorDirectory", (app, html, data) => {
@@ -112,8 +126,48 @@ Hooks.on("renderActorDirectory", (app, html, data) => {
     // Button: Delete Non-GM Users
     const deleteNonGMBtn = createButton("fa-solid fa-user-slash", "Delete Non-GM Users", async () => {
         const nonGMs = game.users.filter(user => !user.isGM);
-        for (let user of nonGMs) await user.delete();
-        ui.notifications.info("All non-GM users have been removed.");
+        if (!nonGMs.length) {
+            ui.notifications.info("No non-GM users found.");
+            return;
+        }
+
+        const userList = nonGMs
+            .map(user => `<li>${escapeHtml(user.name)}</li>`)
+            .join("");
+        const confirmed = await foundry.applications.api.DialogV2.confirm({
+            window: { title: "Delete Non-GM Users" },
+            content: `
+                <p>Delete the following ${nonGMs.length} non-GM user${nonGMs.length === 1 ? "" : "s"}?</p>
+                <ul>${userList}</ul>
+                <p><strong>This action cannot be undone.</strong></p>
+            `,
+            yes: {
+                label: `Delete ${nonGMs.length} User${nonGMs.length === 1 ? "" : "s"}`,
+                icon: "fa-solid fa-user-slash"
+            },
+            no: {
+                label: "Cancel",
+                icon: "fa-solid fa-xmark"
+            }
+        });
+        if (!confirmed) return;
+
+        const failures = [];
+        for (const user of nonGMs) {
+            try {
+                await user.delete();
+            } catch (error) {
+                failures.push(user.name);
+                console.error(`Failed to delete non-GM user ${user.name}:`, error);
+            }
+        }
+
+        const deletedCount = nonGMs.length - failures.length;
+        if (failures.length) {
+            ui.notifications.warn(`Deleted ${deletedCount} user${deletedCount === 1 ? "" : "s"}; failed to delete: ${failures.join(", ")}.`);
+        } else {
+            ui.notifications.info(`Deleted ${deletedCount} non-GM user${deletedCount === 1 ? "" : "s"}.`);
+        }
     });
 
     // Button: Upload Folder to GitHub

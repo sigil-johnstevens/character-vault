@@ -1,15 +1,6 @@
 // Utility functions for character-vault module
 
-export const MODULE_ID = "character-vault";
-
-// Get FoundryVTT settings for GitHub integration
-export function getGitHubSettings() {
-    return {
-        repo: game.settings.get(MODULE_ID, "githubRepo"),
-        path: game.settings.get(MODULE_ID, "githubPath"),
-        yourPAT: game.settings.get(MODULE_ID, "githubPAT"),
-    };
-}
+import { normalizeGitHubPath } from "./githubClient.js";
 
 export function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, char => {
@@ -24,32 +15,6 @@ export function escapeHtml(value) {
     });
 }
 
-export function normalizeGitHubPath(path) {
-    return String(path ?? "").trim().replace(/^\/+|\/+$/g, "");
-}
-
-export function encodeGitHubPath(path) {
-    return normalizeGitHubPath(path)
-        .split("/")
-        .filter(Boolean)
-        .map(segment => encodeURIComponent(segment))
-        .join("/");
-}
-
-export function buildGitHubContentsUrl(repo, path, fileName = null) {
-    const encodedPath = encodeGitHubPath(path);
-    const parts = [`https://api.github.com/repos/${repo}/contents`];
-
-    if (encodedPath) parts.push(encodedPath);
-    if (fileName) parts.push(encodeURIComponent(fileName));
-
-    return parts.join("/");
-}
-
-export function getDefaultGitHubPath() {
-    return normalizeGitHubPath(game.settings.get(MODULE_ID, "githubPath"));
-}
-
 export function buildGitHubPathOptions(paths, selectedPath) {
     const selected = normalizeGitHubPath(selectedPath);
 
@@ -58,52 +23,6 @@ export function buildGitHubPathOptions(paths, selectedPath) {
         const label = normalized || "/";
         return `<option value="${escapeHtml(normalized)}"${normalized === selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
     }).join("");
-}
-
-function dedupeGitHubPaths(paths) {
-    return [...new Set(paths.map(normalizeGitHubPath))].sort((a, b) => a.localeCompare(b));
-}
-
-function isVisibleGitHubPath(path) {
-    return normalizeGitHubPath(path)
-        .split("/")
-        .filter(Boolean)
-        .every(segment => !segment.startsWith("."));
-}
-
-export async function fetchGitHubFolderList() {
-    const { repo, path, yourPAT } = getGitHubSettings();
-    const defaultPath = normalizeGitHubPath(path);
-    const folders = new Set([defaultPath]);
-    const url = `https://api.github.com/repos/${repo}/git/trees/main?recursive=1`;
-
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `token ${yourPAT}`,
-            }
-        });
-
-        if (!response.ok) {
-            console.error('Error fetching GitHub folder list:', response.statusText);
-            return dedupeGitHubPaths([...folders]);
-        }
-
-        const data = await response.json();
-        for (const entry of data.tree ?? []) {
-            if (entry.type === "tree") {
-                if (isVisibleGitHubPath(entry.path)) folders.add(entry.path);
-            } else if (entry.type === "blob" && entry.path?.endsWith(".json")) {
-                const parentPath = entry.path.split("/").slice(0, -1).join("/");
-                if (isVisibleGitHubPath(parentPath)) folders.add(parentPath);
-            }
-        }
-    } catch (error) {
-        console.error('Failed to fetch GitHub folder list:', error);
-    }
-
-    return dedupeGitHubPaths([...folders]);
 }
 
 export function getDialogElement(target) {
@@ -123,11 +42,6 @@ export function getSanitizedActorFileName(actor) {
     // Use Foundry VTT v13's string.slugify method with recommended options
     const slug = actor.name.slugify({ lowercase: true, replacement: "-", strict: true });
     return slug + ".json";
-}
-
-// Base64 encode string for GitHub API
-export function toBase64(str) {
-    return btoa(unescape(encodeURIComponent(str)));
 }
 
 async function copyHotbarPage(user, sourceBar) {

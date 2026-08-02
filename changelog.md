@@ -1,5 +1,10 @@
 # Character Vault
 
+## 2.2.2
+
+- Consolidate github functions into `gitHubClient.js` to reduce duplication of git actions
+- Pre-load default directory actor list on world `ready` to speed up import dialog wait times
+
 ## 2.2.1
 
 - Add feature to add addtional actors isung a `+N` to create additional actors for a user (e.g., Valeros+2,Seoni,Kyra creates two additional actors assigned to Valeros)
