@@ -76,7 +76,14 @@ import {
 } from './src/uploadActors.js';
 
 Hooks.once("ready", () => {
-    const exports = {
+    const module = game.modules.get(MODULE_ID);
+    if (!module) {
+        console.error("Character Vault: Could not register the module API.");
+        return;
+    }
+
+    module.api = Object.freeze({
+        generateUsers,
         fetchGitHubActorList,
         fetchGitHubFolderList,
         openImportDialog,
@@ -84,9 +91,8 @@ Hooks.once("ready", () => {
         openFolderImportDialog,
         openActorUploadDialog,
         uploadActorToGitHub,
-    };
-    Object.entries(exports).forEach(([key, fn]) => window[key] = fn);
-    console.log("Character Vault: Functions are now globally available.");
+    });
+    console.log("Character Vault: Module API is ready.");
     void preloadGitHubImportData().catch(error => {
         console.debug("Character Vault could not preload GitHub import data.", error);
     });

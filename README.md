@@ -48,3 +48,24 @@ To function correctly, these settings must be configured for the module's GitHub
 Currently, there is only one setting for user creation.
 
 **Password Strength** : **Simple** passwords only have lowercase letters and numbers. **Strong** passwords have mixed upper- and lower-case letters, a special character (like @, $, !), and some numbers.
+
+Developer API
+-------------
+
+Character Vault exposes its supported functions through the Foundry module API:
+
+```js
+const characterVault = game.modules.get("character-vault").api;
+await characterVault.generateUsers();
+```
+
+Available methods:
+
+- `generateUsers`
+- `fetchGitHubActorList`
+- `fetchGitHubFolderList`
+- `openImportDialog`
+- `openFolderImportDialog`
+- `importActorFromGitHubToActor`
+- `openActorUploadDialog`
+- `uploadActorToGitHub`
