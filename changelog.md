@@ -1,5 +1,10 @@
 # Character Vault
 
+## 2.2.1
+
+- Add feature to add addtional actors isung a `+N` to create additional actors for a user (e.g., Valeros+2,Seoni,Kyra creates two additional actors assigned to Valeros)
+- Add option to select alternate git folder for import/export
+
 ## 2.2.0
 
 - Add Foundry VTT v14 compatibility

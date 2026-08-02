@@ -1,6 +1,7 @@
 const MODULE_ID = "character-vault";
 const WORDLIST_URL = `modules/${MODULE_ID}/src/wordlist.txt`;
 const FALLBACK_WORDLIST = ["tiger", "rabbit", "blue", "green", "apple", "banana", "berry", "orange"];
+const MAX_ADDITIONAL_ACTORS = 20;
 let WordlistCache = null;
 
 export async function generateUsers() {
@@ -55,29 +56,39 @@ async function processUserGeneration(sessionName, userInput) {
   }
 
   const folder = await createOrFindFolder(sessionName);
-  const userNames = userInput
+  // A username can include "+N" to create N extra actors for the same user.
+  const parsedEntries = userInput
     .split(",")
-    .map(name => name.trim())
-    .filter(Boolean);
+    .map(parseUserEntry);
+  const invalidEntries = parsedEntries.filter(entry => entry.error);
+  const userEntries = parsedEntries.filter(entry => entry.username && !entry.error);
 
-  if (!userNames.length) {
+  for (let invalidEntry of invalidEntries) {
+    ui.notifications.warn(`Skipped "${invalidEntry.raw}": ${invalidEntry.error}`);
+  }
+
+  if (!userEntries.length) {
     ui.notifications.warn("No valid usernames were provided.");
     return;
   }
 
-  for (let username of userNames) {
-    const [user, password] = await createUser(username, folder);
+  for (let userEntry of userEntries) {
+    const [user, password, actorCount] = await createUser(userEntry.username, folder, userEntry.additionalActors);
 
     const inviteURL = game.data.addresses.remote;
+    const escapedUsername = escapeHTML(userEntry.username);
+    const escapedPassword = escapeHTML(password);
+    const escapedInviteURL = escapeHTML(inviteURL);
 
     const content = `
-      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${username}</p>
-      <p><strong><i class="fa-solid fa-key"></i> Password:</strong> <code>${password}</code></p>
+      <p><strong><i class="fa-solid fa-user"></i> User Created:</strong> ${escapedUsername}</p>
+      <p><strong><i class="fa-solid fa-users"></i> Actors Created:</strong> ${actorCount}</p>
+      <p><strong><i class="fa-solid fa-key"></i> Password:</strong> <code>${escapedPassword}</code></p>
       <p><strong><i class="fa-solid fa-link"></i> Invite Link:</strong> 
-        <a href="${inviteURL}" target="_blank">${inviteURL}</a>
+        <a href="${escapedInviteURL}" target="_blank" rel="noopener">${escapedInviteURL}</a>
       </p>
       <div style="margin-top: 0.5em;">
-        <button class="copyUserInfo" data-username="${username}" data-password="${password}" data-url="${inviteURL}">
+        <button class="copyUserInfo" data-username="${escapedUsername}" data-password="${escapedPassword}" data-url="${escapedInviteURL}">
           <i class="fa-solid fa-clipboard"></i> Copy Info to Clipboard
         </button>
       </div>
@@ -93,7 +104,7 @@ async function processUserGeneration(sessionName, userInput) {
   }
 }
 
-// ✅ Clipboard listener (whisper-compatible and native DOM-safe)
+// Clipboard listener (whisper-compatible and native DOM-safe)
 Hooks.on("renderChatMessageHTML", (message, htmlElement) => {
   if (!game.user.isGM) return;
 
@@ -131,6 +142,38 @@ Hooks.on("renderChatMessageHTML", (message, htmlElement) => {
   });
 });
 
+function parseUserEntry(entry) {
+  // Keep "+N" as generation syntax only; the actual username stays clean.
+  const raw = entry.trim();
+  if (!raw) return { raw, username: "", additionalActors: 0 };
+
+  const plusIndex = raw.lastIndexOf("+");
+  if (plusIndex === -1) return { raw, username: raw, additionalActors: 0 };
+
+  const username = raw.slice(0, plusIndex).trim();
+  const actorCountText = raw.slice(plusIndex + 1).trim();
+
+  if (!username) {
+    return { raw, username: "", additionalActors: 0, error: "missing username before +N." };
+  }
+
+  if (!/^\d+$/u.test(actorCountText)) {
+    return { raw, username, additionalActors: 0, error: "use +N with a whole number, such as +1 or +2." };
+  }
+
+  const additionalActors = Number(actorCountText);
+  if (additionalActors > MAX_ADDITIONAL_ACTORS) {
+    return {
+      raw,
+      username,
+      additionalActors: 0,
+      error: `maximum extra actors per user is ${MAX_ADDITIONAL_ACTORS}.`
+    };
+  }
+
+  return { raw, username, additionalActors };
+}
+
 // Actor folder logic
 async function createOrFindFolder(sessionName) {
   let folder = game.folders.find(f => f.name === sessionName && f.type === "Actor");
@@ -141,17 +184,38 @@ async function createOrFindFolder(sessionName) {
 }
 
 // Create user and link to actor
-async function createUser(username, folder) {
+async function createUser(username, folder, additionalActors = 0) {
   const password = await fetchPassword();
   const color = await fetchRandomColor();
   const actor = await Actor.create({ name: username, type: "character", folder: folder.id });
   const user = await User.create({ name: username, password, character: actor.id, color });
 
-  let owner_obj = {};
-  owner_obj[user.id] = 3; // Owner
-  await actor.update({ ownership: owner_obj });
+  const ownership = {
+    default: CONST.DOCUMENT_OWNERSHIP_LEVELS?.NONE ?? 0,
+    [user.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3
+  };
+  await actor.update({ ownership });
 
-  return [user, password];
+  // Extra actors use the same owner but do not create additional users.
+  const extraActorData = [];
+  for (let i = 1; i <= additionalActors; i++) {
+    extraActorData.push({ name: `${username} ${i}`, type: "character", folder: folder.id, ownership });
+  }
+
+  const extraActors = extraActorData.length ? await Actor.createDocuments(extraActorData) : [];
+  return [user, password, 1 + extraActors.length];
+}
+
+function escapeHTML(value) {
+  if (foundry.utils.escapeHTML) return foundry.utils.escapeHTML(String(value));
+
+  return String(value).replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[character]));
 }
 
 // Generate password locally (avoids CORS failures from browser fetch)

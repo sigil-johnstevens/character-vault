@@ -1,19 +1,16 @@
 
-import { getGitHubSettings, getActorFolders } from "./utils.js";
+import {
+    buildGitHubContentsUrl,
+    buildGitHubPathOptions,
+    escapeHtml,
+    fetchGitHubFolderList,
+    getActorFolders,
+    getDefaultGitHubPath,
+    getDialogElement,
+    getGitHubSettings,
+    normalizeGitHubPath
+} from "./utils.js";
 const MODULE_ID = "character-vault";
-
-function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>"']/g, char => {
-        switch (char) {
-            case "&": return "&amp;";
-            case "<": return "&lt;";
-            case ">": return "&gt;";
-            case "\"": return "&quot;";
-            case "'": return "&#39;";
-            default: return char;
-        }
-    });
-}
 
 function decodeBase64Utf8(base64Content) {
     const binary = atob(base64Content ?? "");
@@ -26,12 +23,12 @@ function decodeBase64Utf8(base64Content) {
     return decodeURIComponent(encoded);
 }
 
-
 // Get list of actors from GitHub, showing actual names from JSON content
-export async function fetchGitHubActorList() {
-    const { repo, path, yourPAT } = getGitHubSettings();
+export async function fetchGitHubActorList(pathOverride = null) {
+    const { repo, path: defaultPath, yourPAT } = getGitHubSettings();
+    const path = normalizeGitHubPath(pathOverride ?? defaultPath);
 
-    const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+    const url = buildGitHubContentsUrl(repo, path);
     const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -46,7 +43,7 @@ export async function fetchGitHubActorList() {
         const jsonFiles = files.filter(file => file.name.endsWith('.json'));
         // Fetch all file contents in parallel
         const actorPromises = jsonFiles.map(async (file) => {
-            const fileResponse = await fetch(`https://api.github.com/repos/${repo}/contents/${path}/${file.name}`, {
+            const fileResponse = await fetch(buildGitHubContentsUrl(repo, path, file.name), {
                 method: 'GET',
                 headers: {
                     'Authorization': `token ${yourPAT}`
@@ -76,7 +73,10 @@ export async function fetchGitHubActorList() {
 // Single Actor import function for use in right click context menu
 export async function openImportDialog(preselectedActorId = null) {
 
-    const githubActors = await fetchGitHubActorList();
+    const githubPaths = await fetchGitHubFolderList();
+    const defaultPath = getDefaultGitHubPath();
+    const initialPath = githubPaths.includes(defaultPath) ? defaultPath : githubPaths[0];
+    const githubActors = await fetchGitHubActorList(initialPath);
     const githubChoices = githubActors.reduce((acc, actor) => {
         acc[actor.fileName] = actor.name;
         return acc;
@@ -91,6 +91,7 @@ export async function openImportDialog(preselectedActorId = null) {
     const githubActorOptions = Object.entries(githubChoices).map(([value, name]) =>
         `<option value="${escapeHtml(value)}">${escapeHtml(name)}</option>`
     ).join('');
+    const githubPathOptions = buildGitHubPathOptions(githubPaths, initialPath);
     const foundryActorOptions = Object.entries(foundryChoices).map(([value, name]) =>
         `<option value="${escapeHtml(value)}"${value === preselectedActorId ? " selected" : ""}>${escapeHtml(name)}</option>`
     ).join('');
@@ -98,8 +99,12 @@ export async function openImportDialog(preselectedActorId = null) {
     const content = `
         <form>
             <div class="form-group">
+                <label>GitHub Path:</label>
+                <select name="githubPath" data-github-path-select>${githubPathOptions}</select>
+            </div>
+            <div class="form-group">
                 <label>GitHub Actors:</label>
-                <select name="githubActor">${githubActorOptions}</select>
+                <select name="githubActor" data-github-actor-select>${githubActorOptions}</select>
             </div>
             <div class="form-group">
                 <label>Foundry Actors:</label>
@@ -112,15 +117,39 @@ export async function openImportDialog(preselectedActorId = null) {
         title: "Import Actor from GitHub",
         content: content,
         modal: true,
+        render: (event, target) => {
+            const root = getDialogElement(target);
+            if (!root) return;
+
+            const pathSelect = root.querySelector("[data-github-path-select]");
+            const actorSelect = root.querySelector("[data-github-actor-select]");
+            const actorCache = new Map([[initialPath, githubActors]]);
+
+            pathSelect?.addEventListener("change", async () => {
+                const selectedPath = normalizeGitHubPath(pathSelect.value);
+                actorSelect.disabled = true;
+
+                if (!actorCache.has(selectedPath)) {
+                    actorCache.set(selectedPath, await fetchGitHubActorList(selectedPath));
+                }
+
+                const actors = actorCache.get(selectedPath);
+                actorSelect.innerHTML = actors.map(actor =>
+                    `<option value="${escapeHtml(actor.fileName)}">${escapeHtml(actor.name)}</option>`
+                ).join("");
+                actorSelect.disabled = false;
+            });
+        },
         ok: {
             label: "Import",
             callback: async (event, button, html) => {
                 const form = button.form; // Get the form from the button context
                 const formData = new FormData(form);
+                const selectedGithubPath = formData.get("githubPath");
                 const selectedGithubActor = formData.get("githubActor");
                 const selectedFoundryActor = formData.get("foundryActor");
-                if (selectedGithubActor && selectedFoundryActor) {
-                    await importActorFromGitHubToActor(selectedGithubActor, selectedFoundryActor);
+                if (selectedGithubPath !== null && selectedGithubActor && selectedFoundryActor) {
+                    await importActorFromGitHubToActor(selectedGithubActor, selectedFoundryActor, selectedGithubPath);
                 }
             }
         },
@@ -132,26 +161,35 @@ export async function openImportDialog(preselectedActorId = null) {
 
 // Multiple Actors Import for UI button
 export async function openFolderImportDialog() {
-    const actorList = await fetchGitHubActorList();
     const folder = await promptForActorFolder();
 
     if (!folder) return;
+
+    const githubPaths = await fetchGitHubFolderList();
+    const defaultPath = getDefaultGitHubPath();
+    const initialPath = githubPaths.includes(defaultPath) ? defaultPath : githubPaths[0];
+    const actorList = await fetchGitHubActorList(initialPath);
 
     // Reduce GitHub actors into a choices object
     const githubChoices = actorList.reduce((acc, actor) => {
         acc[actor.fileName] = actor.name;
         return acc;
     }, {});
+    const githubPathOptions = buildGitHubPathOptions(githubPaths, initialPath);
+    const githubActorOptions = Object.entries(githubChoices).map(([fileName, name]) =>
+        `<option value="${escapeHtml(fileName)}">${escapeHtml(name)}</option>`
+    ).join('');
 
     // Form field for each actor in the folder
     const folderActorFields = folder.contents.map(actor => {
         return `
             <div class="form-group">
                 <label>${escapeHtml(actor.name)}</label>
-                <select name="${escapeHtml(actor.id)}">
-                    ${Object.entries(githubChoices).map(([fileName, name]) =>
-            `<option value="${escapeHtml(fileName)}">${escapeHtml(name)}</option>`
-        ).join('')}
+                <select name="${escapeHtml(actor.id)}-path" data-github-path-select>
+                    ${githubPathOptions}
+                </select>
+                <select name="${escapeHtml(actor.id)}-file" data-github-actor-select>
+                    ${githubActorOptions}
                 </select>
             </div>
         `;
@@ -163,6 +201,32 @@ export async function openFolderImportDialog() {
         title: "Import Actors from GitHub",
         content: content,
         modal: true,
+        render: (event, target) => {
+            const root = getDialogElement(target);
+            if (!root) return;
+
+            const actorCache = new Map([[initialPath, actorList]]);
+
+            for (const pathSelect of root.querySelectorAll("[data-github-path-select]")) {
+                const actorSelect = pathSelect.parentElement?.querySelector("[data-github-actor-select]");
+                if (!actorSelect) continue;
+
+                pathSelect.addEventListener("change", async () => {
+                    const selectedPath = normalizeGitHubPath(pathSelect.value);
+                    actorSelect.disabled = true;
+
+                    if (!actorCache.has(selectedPath)) {
+                        actorCache.set(selectedPath, await fetchGitHubActorList(selectedPath));
+                    }
+
+                    const actors = actorCache.get(selectedPath);
+                    actorSelect.innerHTML = actors.map(actor =>
+                        `<option value="${escapeHtml(actor.fileName)}">${escapeHtml(actor.name)}</option>`
+                    ).join("");
+                    actorSelect.disabled = false;
+                });
+            }
+        },
         ok: {
             label: "Import",
             callback: async (event, button, html) => {
@@ -170,9 +234,10 @@ export async function openFolderImportDialog() {
                 const formData = new FormData(form);
 
                 for (const actor of folder.contents) {
-                    const selectedFile = formData.get(actor.id);
-                    if (selectedFile) {
-                        await importActorFromGitHubToActor(selectedFile, actor.id);
+                    const selectedPath = formData.get(`${actor.id}-path`);
+                    const selectedFile = formData.get(`${actor.id}-file`);
+                    if (selectedPath !== null && selectedFile) {
+                        await importActorFromGitHubToActor(selectedFile, actor.id, selectedPath);
                     }
                 }
             }
@@ -185,7 +250,7 @@ export async function openFolderImportDialog() {
             icon: "fa-solid fa-upload"
         },
         position: {
-            width: 400,
+            width: 600,
             height: "auto"
         }
     });
@@ -236,7 +301,7 @@ export async function promptForActorFolder() {
                 icon: "fa-solid fa-folder-open"
             },
             position: {
-                width: 400,
+                width: 600,
                 height: "auto"
             }
         });
@@ -244,12 +309,12 @@ export async function promptForActorFolder() {
 }
 
 // Function to import the actor from GitHub to Foundry using the built-in importFromJSON function
-export async function importActorFromGitHubToActor(fileName, actorId) {
+export async function importActorFromGitHubToActor(fileName, actorId, pathOverride = null) {
     const repo = game.settings.get(MODULE_ID, "githubRepo");
-    const path = game.settings.get(MODULE_ID, "githubPath");
+    const path = normalizeGitHubPath(pathOverride ?? game.settings.get(MODULE_ID, "githubPath"));
     const yourPAT = game.settings.get(MODULE_ID, "githubPAT");
 
-    const url = `https://api.github.com/repos/${repo}/contents/${path}/${encodeURIComponent(fileName)}`;
+    const url = buildGitHubContentsUrl(repo, path, fileName);
     const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -273,7 +338,6 @@ export async function importActorFromGitHubToActor(fileName, actorId) {
         try {
             // Use the importFromJSON function to import the data
             await actor.importFromJSON(jsonContent);
-            ui.notifications.info(`Actor ${actor.name} has been successfully imported and updated.`);
         } catch (error) {
             console.error('Failed to import actor:', error);
             ui.notifications.error('Failed to import actor from JSON.');
