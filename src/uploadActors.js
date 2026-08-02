@@ -2,14 +2,19 @@
 import {
     buildGitHubPathOptions,
     escapeHtml,
-    fetchGitHubFolderList,
     getActorFolders,
-    getDefaultGitHubPath,
     getSanitizedActorFileName,
-    normalizeGitHubPath
 } from "./utils.js";
-import { getGitHubFileShas, putGitHubFileContent } from "./githubClient.js";
+import {
+    fetchGitHubFolderList,
+    getDefaultGitHubPath,
+    getGitHubFileShas,
+    invalidateGitHubFolderCache,
+    normalizeGitHubPath,
+    putGitHubFileContent
+} from "./githubClient.js";
 import { runBatchOperation } from "./batchOperation.js";
+import { invalidateGitHubActorListCache } from "./importActors.js";
 
 
 // Step 2: Create a Dialog for Folder Selection
@@ -140,7 +145,7 @@ export async function uploadActorsFromFolderToGitHub(folder, pathOverride = null
         return;
     }
 
-    await runBatchOperation({
+    const result = await runBatchOperation({
         title: "Upload Actors to GitHub",
         items: actors,
         getLabel: actor => actor.name,
@@ -152,6 +157,10 @@ export async function uploadActorsFromFolderToGitHub(folder, pathOverride = null
             return uploadToGitHub(actor, jsonContent, path, existingShas.get(fileName) ?? null);
         }
     });
+    if (result.completed > 0) {
+        invalidateGitHubActorListCache(path);
+        invalidateGitHubFolderCache();
+    }
 }
 
 // Step 4: Function to Upload a Single Actor to GitHub
@@ -176,6 +185,8 @@ export async function uploadActorToGitHub(actor, pathOverride = null) {
     const result = await uploadToGitHub(actor, jsonContent, path, existingShas.get(fileName) ?? null);
 
     if (result.ok) {
+        invalidateGitHubActorListCache(path);
+        invalidateGitHubFolderCache();
         ui.notifications.info(`${actor.name} has been successfully uploaded to GitHub.`);
     } else {
         ui.notifications.error(`Failed to upload actor ${actor.name} to GitHub: ${result.error.message}`);

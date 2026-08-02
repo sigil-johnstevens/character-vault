@@ -1,9 +1,9 @@
 const MODULE_ID = "character-vault";
 import {
     copyGmHotbar,
-    escapeHtml,
-    fetchGitHubFolderList
+    escapeHtml
 } from './src/utils.js';
+import { fetchGitHubFolderList } from './src/githubClient.js';
 
 // Register Access Token, Path, and Repo as Game Settings
 Hooks.once('init', () => {
@@ -64,6 +64,7 @@ Hooks.once('init', () => {
 import { generateUsers } from './src/createUsers.js';
 import {
     fetchGitHubActorList,
+    preloadGitHubImportData,
     openImportDialog,
     openFolderImportDialog,
     importActorFromGitHubToActor
@@ -86,6 +87,9 @@ Hooks.once("ready", () => {
     };
     Object.entries(exports).forEach(([key, fn]) => window[key] = fn);
     console.log("Character Vault: Functions are now globally available.");
+    void preloadGitHubImportData().catch(error => {
+        console.debug("Character Vault could not preload GitHub import data.", error);
+    });
 });
 
 Hooks.on("renderActorDirectory", (app, html, data) => {

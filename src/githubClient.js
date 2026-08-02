@@ -18,6 +18,14 @@ export function getGitHubConfiguration() {
     };
 }
 
+export function normalizeGitHubPath(path) {
+    return String(path ?? "").trim().replace(/^\/+|\/+$/gu, "");
+}
+
+export function getDefaultGitHubPath() {
+    return normalizeGitHubPath(getGitHubConfiguration().path);
+}
+
 export function validateGitHubConfiguration(configuration = getGitHubConfiguration()) {
     if (!configuration.repo || configuration.repo === "yourRepo") {
         throw new GitHubError("Configure a GitHub repository in Character Vault settings.");
@@ -96,16 +104,72 @@ export async function fetchGitHubTree() {
     return githubRequest(`/repos/${encodedRepo}/git/trees/${encodedBranch}?recursive=1`);
 }
 
-function normalizePath(path) {
-    return String(path ?? "").trim().replace(/^\/+|\/+$/gu, "");
-}
-
 function encodePath(path) {
-    return normalizePath(path)
+    return normalizeGitHubPath(path)
         .split("/")
         .filter(Boolean)
         .map(encodeURIComponent)
         .join("/");
+}
+
+function dedupeGitHubPaths(paths) {
+    return [...new Set(paths.map(normalizeGitHubPath))].sort((left, right) => left.localeCompare(right));
+}
+
+function isVisibleGitHubPath(path) {
+    return normalizeGitHubPath(path)
+        .split("/")
+        .filter(Boolean)
+        .every(segment => !segment.startsWith("."));
+}
+
+let GitHubFolderCache = null;
+
+function githubFolderCacheKey(defaultPath) {
+    const { repo, branch } = getGitHubConfiguration();
+    return `${repo}\n${branch}\n${defaultPath}`;
+}
+
+export function invalidateGitHubFolderCache() {
+    GitHubFolderCache = null;
+}
+
+export async function fetchGitHubFolderList({ force = false, notify = true } = {}) {
+    const defaultPath = getDefaultGitHubPath();
+    const cacheKey = githubFolderCacheKey(defaultPath);
+
+    if (force || GitHubFolderCache?.key !== cacheKey) GitHubFolderCache = { key: cacheKey };
+    if (GitHubFolderCache.value) return GitHubFolderCache.value;
+    const cache = GitHubFolderCache;
+
+    if (!cache.promise) {
+        cache.promise = (async () => {
+            const folders = new Set([defaultPath]);
+            const data = await fetchGitHubTree();
+            for (const entry of data.tree ?? []) {
+                if (entry.type === "tree") {
+                    if (isVisibleGitHubPath(entry.path)) folders.add(entry.path);
+                } else if (entry.type === "blob" && entry.path?.endsWith(".json")) {
+                    const parentPath = entry.path.split("/").slice(0, -1).join("/");
+                    if (isVisibleGitHubPath(parentPath)) folders.add(parentPath);
+                }
+            }
+
+            cache.value = dedupeGitHubPaths([...folders]);
+            return cache.value;
+        })().finally(() => {
+            cache.promise = null;
+        });
+    }
+
+    try {
+        return await cache.promise;
+    } catch (error) {
+        console.error("Failed to fetch GitHub folder list:", error);
+        if (GitHubFolderCache === cache) GitHubFolderCache = null;
+        if (notify) ui.notifications.error(error.message || "Failed to fetch GitHub folder list.");
+        return null;
+    }
 }
 
 function contentsRoute(repo, path, fileName = null) {

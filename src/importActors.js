@@ -2,14 +2,20 @@
 import {
     buildGitHubPathOptions,
     escapeHtml,
-    fetchGitHubFolderList,
     getActorFolders,
-    getDefaultGitHubPath,
-    getDialogElement,
-    normalizeGitHubPath
+    getDialogElement
 } from "./utils.js";
-import { getGitHubFileContent, listGitHubDirectory } from "./githubClient.js";
+import {
+    fetchGitHubFolderList,
+    getDefaultGitHubPath,
+    getGitHubConfiguration,
+    getGitHubFileContent,
+    listGitHubDirectory,
+    normalizeGitHubPath
+} from "./githubClient.js";
 import { runBatchOperation } from "./batchOperation.js";
+
+const ActorListCache = new Map();
 
 async function mapWithConcurrency(items, concurrency, callback) {
     const results = new Array(items.length);
@@ -49,31 +55,73 @@ async function importFromJsonSilently(actor, jsonContent) {
 }
 
 // Get list of actors from GitHub, showing actual names from JSON content
-export async function fetchGitHubActorList(pathOverride = null) {
+function actorListCacheKey(path) {
+    const { repo, branch } = getGitHubConfiguration();
+    return `${repo}\n${branch}\n${path}`;
+}
+
+export function invalidateGitHubActorListCache(pathOverride = null) {
+    if (pathOverride === null) {
+        ActorListCache.clear();
+        return;
+    }
+
+    ActorListCache.delete(actorListCacheKey(normalizeGitHubPath(pathOverride)));
+}
+
+export async function fetchGitHubActorList(pathOverride = null, { force = false, notify = true } = {}) {
     const path = normalizeGitHubPath(pathOverride ?? getDefaultGitHubPath());
+    const cacheKey = actorListCacheKey(path);
+    let cache = ActorListCache.get(cacheKey);
+
+    if (force || !cache) {
+        cache = {};
+        ActorListCache.set(cacheKey, cache);
+    }
+    if (cache.value) return cache.value;
+
+    if (!cache.promise) {
+        cache.promise = (async () => {
+            const files = await listGitHubDirectory(path);
+            const jsonFiles = files.filter(file => file.type === "file" && file.name?.endsWith(".json"));
+            const actorList = await mapWithConcurrency(jsonFiles, 4, async file => {
+                try {
+                    const fileContent = await getGitHubFileContent(file.name, path);
+                    const actorData = JSON.parse(fileContent);
+                    return {
+                        name: actorData.name || file.name.replace(/\.json$/u, ""),
+                        fileName: file.name
+                    };
+                } catch (error) {
+                    console.warn(`Character Vault skipped invalid GitHub actor file ${file.name}:`, error);
+                    return null;
+                }
+            });
+            cache.value = actorList.filter(Boolean);
+            return cache.value;
+        })().finally(() => {
+            cache.promise = null;
+        });
+    }
 
     try {
-        const files = await listGitHubDirectory(path);
-        const jsonFiles = files.filter(file => file.type === "file" && file.name?.endsWith(".json"));
-        const actorList = await mapWithConcurrency(jsonFiles, 4, async file => {
-            try {
-                const fileContent = await getGitHubFileContent(file.name, path);
-                const actorData = JSON.parse(fileContent);
-                return {
-                    name: actorData.name || file.name.replace(/\.json$/u, ""),
-                    fileName: file.name
-                };
-            } catch (error) {
-                console.warn(`Character Vault skipped invalid GitHub actor file ${file.name}:`, error);
-                return null;
-            }
-        });
-        return actorList.filter(Boolean);
+        return await cache.promise;
     } catch (error) {
         console.error("Failed to fetch the GitHub actor list:", error);
-        ui.notifications.error(error.message || "Failed to fetch the GitHub actor list.");
+        if (ActorListCache.get(cacheKey) === cache) ActorListCache.delete(cacheKey);
+        if (notify) ui.notifications.error(error.message || "Failed to fetch the GitHub actor list.");
         return [];
     }
+}
+
+export async function preloadGitHubImportData() {
+    if (!game.user.isGM && !game.actors.some(actor => actor.isOwner)) return;
+
+    const defaultPath = getDefaultGitHubPath();
+    await Promise.all([
+        fetchGitHubFolderList({ notify: false }),
+        fetchGitHubActorList(defaultPath, { notify: false })
+    ]);
 }
 
 // Single Actor import function for use in right click context menu
